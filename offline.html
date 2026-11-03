@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFF3E4">
+  <meta name="robots" content="noindex">
+  <title>Offline - SiDiPa</title>
+  <style>
+    :root { --krem:#FFF3E4; --kuning:#FFD93D; --hitam:#000; --toska:#3CCFB4; }
+    * { box-sizing:border-box; }
+    body {
+      margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+      padding:24px; background-color:var(--krem); color:var(--hitam);
+      background-image:radial-gradient(var(--hitam) 1.5px, transparent 1.5px);
+      background-size:18px 18px;
+      font-family:'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-weight:600; line-height:1.5;
+    }
+    .kartu {
+      width:100%; max-width:420px; background:#fff; border:3px solid var(--hitam);
+      border-radius:12px; box-shadow:5px 5px 0 var(--hitam); padding:26px 22px; text-align:center;
+    }
+    .logo { display:flex; justify-content:center; margin-bottom:18px; }
+    .label { font-size:12px; letter-spacing:.12em; text-transform:uppercase; margin:0 0 6px; }
+    h1 { font-size:26px; margin:0 0 10px; }
+    p { font-size:15px; margin:0 0 18px; }
+    .stiker {
+      display:inline-block; background:var(--kuning); border:3px solid var(--hitam);
+      border-radius:8px; box-shadow:3px 3px 0 var(--hitam); padding:6px 14px;
+      transform:rotate(-1.5deg); font-size:13px; margin-bottom:18px;
+    }
+    ul { text-align:left; font-size:14px; margin:0 0 22px; padding-left:20px; }
+    li { margin-bottom:6px; }
+    .tombol {
+      width:100%; min-height:48px; cursor:pointer; font:inherit; font-weight:700;
+      background:var(--kuning); color:var(--hitam); border:3px solid var(--hitam);
+      border-radius:10px; box-shadow:5px 5px 0 var(--hitam); transition:transform .1s, box-shadow .1s;
+    }
+    .tombol:active { transform:translate(4px,4px); box-shadow:1px 1px 0 var(--hitam); }
+    .kaki { font-size:12px; margin:16px 0 0; opacity:.8; }
+    a { color:var(--hitam); }
+  </style>
+</head>
+<body>
+  <main class="kartu">
+    <div class="logo" aria-hidden="true">
+      <svg width="86" height="86" viewBox="0 0 86 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="80" height="80" rx="19" fill="#FFD93D" stroke="#000" stroke-width="4"/>
+        <rect x="17" y="24" width="52" height="38" rx="6" fill="#fff" stroke="#000" stroke-width="3"/>
+        <rect x="23" y="30" width="9" height="9" fill="#000"/>
+        <rect x="35" y="30" width="9" height="9" fill="#000"/>
+        <rect x="23" y="42" width="9" height="9" fill="#000"/>
+        <rect x="47" y="31" width="17" height="3" fill="#000"/>
+        <rect x="47" y="39" width="14" height="3" fill="#000"/>
+        <rect x="47" y="47" width="17" height="3" fill="#000"/>
+        <rect x="23" y="55" width="23" height="3" fill="#000"/>
+        <circle cx="62" cy="54" r="8" fill="#3CCFB4" stroke="#000" stroke-width="3"/>
+      </svg>
+    </div>
+    <p class="label">SiDiPa &middot; Siswa Digital Pasport</p>
+    <h1>Sedang offline</h1>
+    <div class="stiker">TIDAK ADA KONEKSI</div>
+    <p>Halaman ini tidak dapat dimuat karena perangkat belum tersambung ke internet.</p>
+    <ul>
+      <li>Data rekap, scan QR, catat poin, dan login memerlukan koneksi.</li>
+      <li>Berkas tampilan aplikasi tetap tersedia dari cache.</li>
+      <li>Jangan tutup halaman sebelum data tersimpan di server.</li>
+    </ul>
+    <button class="tombol" type="button" onclick="location.reload()">Coba lagi</button>
+    <p class="kaki">Setelah online, tekan &ldquo;Coba lagi&rdquo; atau <a href="./">buka beranda</a>.</p>
+  </main>
+</body>
+</html>

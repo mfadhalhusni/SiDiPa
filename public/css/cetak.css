@@ -1,0 +1,51 @@
+/* Cetak sertifikat karakter siswa - A4 landscape, layak cetak hitam putih */
+@page { size: A4 landscape; margin: 10mm; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: #fff !important;
+  color: #000;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 500;
+}
+body.cetak-sertifikat { background-image: none; }
+.kertas-sertifikat {
+  width: 100%;
+  min-height: 168mm;
+  border: 4px solid #000;
+  border-radius: 10px;
+  padding: 9mm 11mm;
+  background: #fff;
+  position: relative;
+}
+.kertas-sertifikat .bingkai-dalam { border: 2px solid #000; padding: 7mm 9mm; min-height: 148mm; }
+.kepala-sertifikat { display: flex; align-items: center; gap: 8mm; border-bottom: 3px solid #000; padding-bottom: 5mm; }
+.kepala-sertifikat img.logo { width: 22mm; height: 22mm; object-fit: contain; border: 3px solid #000; border-radius: 6px; padding: 2mm; }
+.kepala-sertifikat h1 { font-size: 20pt; margin: 0 0 2mm; letter-spacing: -.02em; }
+.kepala-sertifikat .nama-sekolah { font-size: 13pt; font-weight: 700; }
+.kepala-sertifikat .label-kecil { font-size: 8pt; letter-spacing: .14em; }
+.judul-sertifikat { text-align: center; font-size: 24pt; font-weight: 700; margin: 7mm 0 1mm; text-transform: uppercase; }
+.subjudul-sertifikat { text-align: center; font-size: 9pt; margin-bottom: 7mm; }
+.identitas-sertifikat { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 10mm; font-size: 10pt; margin-bottom: 6mm; }
+.identitas-sertifikat .pasangan { display: flex; gap: 3mm; border-bottom: 1px dashed #000; padding-bottom: 1mm; }
+.identitas-sertifikat .kunci { font-weight: 700; min-width: 30mm; }
+table.sertifikat-skor { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-bottom: 6mm; }
+table.sertifikat-skor th, table.sertifikat-skor td { border: 2px solid #000; padding: 2.5mm 3mm; text-align: left; }
+table.sertifikat-skor th { background: #eee; font-weight: 700; text-transform: uppercase; font-size: 8pt; letter-spacing: .06em; }
+table.sertifikat-skor td.predikat { font-weight: 700; font-size: 12pt; text-align: center; }
+.kaki-sertifikat { display: flex; align-items: flex-end; justify-content: space-between; gap: 8mm; margin-top: 4mm; }
+.kode-sertifikat { font-size: 9pt; }
+.kode-sertifikat .kode { font-weight: 700; font-size: 11pt; letter-spacing: .05em; }
+.qr-sertifikat { width: 26mm; height: 26mm; border: 2px solid #000; display: grid; place-items: center; padding: 1mm; }
+.qr-sertifikat img, .qr-sertifikat canvas, .qr-sertifikat svg { width: 100% !important; height: 100% !important; }
+.cetak-alat { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; max-width: 297mm; margin: 0 auto 16px; padding: 14px; background: #fff; border: 3px solid #000; border-radius: 10px; box-shadow: 5px 5px 0 #000; }
+.cetak-alat .petunjuk-cetak { font-size: .88rem; font-weight: 600; flex: 1 1 240px; }
+.tanda-tangan { text-align: center; font-size: 9pt; min-width: 42mm; }
+.tanda-tangan img { width: 38mm; height: 16mm; object-fit: contain; margin: 0 auto 1mm; border-bottom: 2px solid #000; padding-bottom: 1mm; }
+.tanda-tangan .nama { font-weight: 700; text-decoration: underline; }
+.tombol-cetak { display: inline-flex; }
+@media print { .tombol-cetak, .petunjuk-cetak, .cetak-alat { display: none !important; } }
+@media screen {
+  body.cetak-sertifikat { padding: 20px; background: #FFF3E4 !important; }
+  .kertas-sertifikat { max-width: 297mm; margin: 0 auto 20px; box-shadow: 6px 6px 0 #000; background: #fff; }
+}

@@ -1,0 +1,28 @@
+/* Cetak kartu siswa - ukuran kartu ATM 85,6 x 54 mm */
+@page { size: 85.6mm 54mm; margin: 0; }
+
+html, body { margin: 0; padding: 0; background: #fff; color: #000; font-family: 'Space Grotesk', system-ui, sans-serif; }
+body.cetak-kartu { background-image: none; }
+.lembar-kartu { display: flex; flex-wrap: wrap; gap: 4mm; }
+.kartu-siswa {
+  width: 85.6mm; height: 54mm;
+  border: 3px solid #000; border-radius: 6px;
+  padding: 3mm 3.5mm;
+  background: #FFF3E4;
+  display: flex; align-items: center; gap: 3mm;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.kartu-siswa .info { flex: 1 1 auto; min-width: 0; }
+.kartu-siswa .label-kecil { font-size: 6pt; letter-spacing: .12em; margin: 0; }
+.kartu-siswa .nama { font-size: 10pt; font-weight: 700; line-height: 1.15; margin: 1mm 0 2mm; word-break: break-word; }
+.kartu-siswa .baris { font-size: 7.5pt; font-weight: 500; border-top: 1.5px solid #000; padding-top: 1mm; margin-top: 1mm; }
+.kartu-siswa .qr { width: 24mm; height: 24mm; flex: 0 0 auto; border: 2px solid #000; background: #fff; display: grid; place-items: center; padding: 1mm; }
+.kartu-siswa .qr img, .kartu-siswa .qr canvas, .kartu-siswa .qr svg { width: 100% !important; height: 100% !important; }
+.cetak-alat { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 auto 16px; max-width: 297mm; padding: 14px; background: #fff; border: 3px solid #000; border-radius: 10px; box-shadow: 5px 5px 0 #000; }
+.cetak-alat .petunjuk-cetak { font-size: .88rem; font-weight: 600; flex: 1 1 240px; }
+.kartu-siswa .kaki { font-size: 6.5pt; font-weight: 700; letter-spacing: .08em; margin-top: 2mm; }
+@media screen {
+  body.cetak-kartu { padding: 20px; background: #FFF3E4; }
+  .kartu-siswa { box-shadow: 4px 4px 0 #000; margin: 0 4mm 4mm 0; }
+}
+@media print { .tombol-cetak, .petunjuk-cetak, .cetak-alat { display: none !important; } }
