@@ -5,21 +5,60 @@ require_once __DIR__ . '/../app/bootstrap.php';
 
 $pengguna = auth_wajib();
 $pesanGalat = '';
+$pesanFoto = '';
+$idPengguna = (int) $pengguna['id'];
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     csrf_wajib();
-    $hasil = auth_ganti_sandi(
-        (int) $pengguna['id'],
-        (string) ($_POST['kata_sandi_lama'] ?? ''),
-        (string) ($_POST['kata_sandi_baru'] ?? ''),
-        (string) ($_POST['ulangi'] ?? '')
-    );
-    if ($hasil['ok']) {
-        flash($hasil['pesan']);
-        alihkan('pages/profil.php');
+    $aksi = (string) ($_POST['aksi'] ?? 'ganti_sandi');
+
+    if ($aksi === 'unggah_foto') {
+        $unggah = unggah_foto_profil($_FILES['foto'] ?? []);
+        if (!$unggah['ok']) {
+            $pesanFoto = $unggah['pesan'];
+        } else {
+            try {
+                $lama = db_nilai('SELECT foto FROM pengguna WHERE id = ?', [$idPengguna], null);
+                db_ubah('pengguna', ['foto' => $unggah['path']], 'id = ?', [$idPengguna]);
+                hapus_berkas_foto($lama === null ? null : (string) $lama);
+                log_akses('unggah_foto_profil', 'pengguna', $idPengguna, $idPengguna);
+                flash('Foto profil berhasil diperbarui.');
+                alihkan('pages/profil.php');
+            } catch (Throwable $galat) {
+                hapus_berkas_foto($unggah['path']);
+                catat_kesalahan('unggah foto profil gagal: ' . $galat->getMessage());
+                $pesanFoto = 'Foto gagal disimpan. Silakan coba lagi.';
+            }
+        }
+    } elseif ($aksi === 'hapus_foto') {
+        try {
+            $lama = db_nilai('SELECT foto FROM pengguna WHERE id = ?', [$idPengguna], null);
+            db_ubah('pengguna', ['foto' => null], 'id = ?', [$idPengguna]);
+            hapus_berkas_foto($lama === null ? null : (string) $lama);
+            log_akses('hapus_foto_profil', 'pengguna', $idPengguna, $idPengguna);
+            flash('Foto profil dihapus.');
+            alihkan('pages/profil.php');
+        } catch (Throwable $galat) {
+            catat_kesalahan('hapus foto profil gagal: ' . $galat->getMessage());
+            $pesanFoto = 'Foto gagal dihapus. Silakan coba lagi.';
+        }
+    } else {
+        $hasil = auth_ganti_sandi(
+            $idPengguna,
+            (string) ($_POST['kata_sandi_lama'] ?? ''),
+            (string) ($_POST['kata_sandi_baru'] ?? ''),
+            (string) ($_POST['ulangi'] ?? '')
+        );
+        if ($hasil['ok']) {
+            flash($hasil['pesan']);
+            alihkan('pages/profil.php');
+        }
+        $pesanGalat = $hasil['pesan'];
     }
-    $pesanGalat = $hasil['pesan'];
 }
+
+$foto = foto_pengguna($idPengguna);
+$maksFoto = (int) pengaturan('maks_ukuran_foto', (string) SIDIPA_MAKS_BUKTI);
 
 $siswa = null;
 $kelasGuru = [];
@@ -64,6 +103,40 @@ halaman_atas('Profil', 'Akun saya', ['nav' => 'profil']);
     </table>
     <div class="form-aksi">
       <a class="tombol tombol-putih" href="<?= e(url('pages/logout.php?csrf_token=' . rawurlencode(csrf_token()))) ?>"><?= ikon('keluar', 20) ?> Keluar</a>
+    </div>
+  </section>
+
+  <section class="kartu form-kartu">
+    <p class="label-kecil">Foto profil</p>
+    <h2>Foto saya</h2>
+    <?php if ($pesanFoto !== ''): ?>
+      <div class="pesan pesan-galat" role="alert"><?= ikon('peringatan', 20) ?><span><?= e($pesanFoto) ?></span></div>
+    <?php endif; ?>
+    <div class="foto-unggah">
+      <?php if ($foto !== ''): ?>
+        <img class="foto-profil" src="<?= e(url($foto)) ?>" alt="Foto profil <?= e($pengguna['nama']) ?>">
+      <?php else: ?>
+        <span class="foto-profil foto-inisial" aria-hidden="true"><?= e(inisial($pengguna['nama'])) ?></span>
+      <?php endif; ?>
+      <div class="foto-aksi">
+        <form method="post" action="<?= e(url('pages/profil.php')) ?>" enctype="multipart/form-data">
+          <?= csrf_field() ?>
+          <input type="hidden" name="aksi" value="unggah_foto">
+          <div class="form-baris">
+            <label for="foto">Pilih foto</label>
+            <input class="input" id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" required>
+            <p class="bantuan">JPG, PNG, atau WEBP · maksimal <?= e((string) round($maksFoto / 1048576, 1)) ?> MB.</p>
+          </div>
+          <div class="form-aksi"><button class="tombol tombol-utama" type="submit"><?= ikon('unggah', 20) ?> Unggah foto</button></div>
+        </form>
+        <?php if ($foto !== ''): ?>
+          <form method="post" action="<?= e(url('pages/profil.php')) ?>">
+            <?= csrf_field() ?>
+            <input type="hidden" name="aksi" value="hapus_foto">
+            <button class="tombol tombol-putih" type="submit">Hapus foto</button>
+          </form>
+        <?php endif; ?>
+      </div>
     </div>
   </section>
 

@@ -45,7 +45,10 @@ function ambang_predikat(): array
     ];
 }
 
-/** Predikat SELALU per aspek. Tidak ada predikat keseluruhan. */
+/**
+ * Ambang predikat A+/A/B/C/D/E. Dipakai untuk predikat per aspek PADA
+ * SERTIFIKAT maupun untuk predikat keseluruhan di BERANDA SISWA.
+ */
 function predikat_dari_persentase(float $persentase): array
 {
     $b = ambang_predikat();
@@ -65,6 +68,45 @@ function predikat_dari_persentase(float $persentase): array
         return ['kode' => 'D', 'keterangan' => 'Perlu pembinaan'];
     }
     return ['kode' => 'E', 'keterangan' => 'Pembinaan intensif'];
+}
+
+
+/**
+ * KEBIJAKAN BARU — ringkasan nilai keseluruhan untuk beranda siswa.
+ * Predikat keseluruhan = rata-rata persentase capaian dari seluruh aspek,
+ * sehingga tiap aspek berbobot sama walaupun targetnya berbeda.
+ * Sertifikat tetap memakai predikat per aspek.
+ */
+function ringkasan_skor_siswa(array $skor): array
+{
+    $jumlah = count($skor);
+    if ($jumlah === 0) {
+        return [
+            'jumlah_aspek' => 0,
+            'total_poin' => 0,
+            'total_target' => 0,
+            'rata_poin' => 0.0,
+            'rata_persen' => 0.0,
+            'predikat' => '-',
+            'keterangan' => 'Belum ada data semester aktif',
+        ];
+    }
+    $totalPoin = (int) array_sum(array_column($skor, 'skor'));
+    $totalTarget = (int) array_sum(array_column($skor, 'target'));
+    $rataPersen = round(
+        array_sum(array_column($skor, 'persentase')) / $jumlah,
+        1
+    );
+    $predikat = predikat_dari_persentase((float) $rataPersen);
+    return [
+        'jumlah_aspek' => $jumlah,
+        'total_poin' => $totalPoin,
+        'total_target' => $totalTarget,
+        'rata_poin' => round($totalPoin / $jumlah, 1),
+        'rata_persen' => $rataPersen,
+        'predikat' => $predikat['kode'],
+        'keterangan' => $predikat['keterangan'],
+    ];
 }
 
 /** Skor awal 0 per semester, tanpa batas atas dan boleh minus. */

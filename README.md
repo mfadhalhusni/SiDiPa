@@ -2,7 +2,7 @@
 
 Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan sertifikat digital untuk satu SMK. Dibuat untuk **shared hosting cPanel**: PHP 8.1+ tanpa framework, MySQL/MariaDB lewat PDO, HTML/CSS/JavaScript vanilla tanpa build step, tanpa Composer. Seluruh antarmuka berbahasa Indonesia dan bergaya **neo brutalism** buatan sendiri.
 
-> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), dan semua laporan diunduh sebagai **XLSX** (lihat bagian 15). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
+> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
 
 ---
 
@@ -32,7 +32,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | **Tahap 3 — Hari libur** | `pages/admin/hari_libur.php`: tambah satu tanggal atau rentang (maks. 93 hari), ubah keterangan, hapus. `cron/harian.php`, `cron/mingguan.php`, dan `api/scan.php` melewati tanggal ini |
 | **Tahap 3 — Rekap kehadiran** | `app/laporan.php` + `pages/umum/rekap_kehadiran.php`: harian, bulanan, dan semester per siswa **dan** per kelas (hadir, hadir awal, terlambat, izin, sakit, alpa, % kehadiran) dengan **unduh XLSX** 3 lembar (Rekap Siswa, Ringkasan Kelas, Keterangan). Hak akses di server: siswa/wali hanya anaknya, guru menjangkau seluruh siswa aktif |
 | **Tahap 4 — Semester** | `pages/admin/sertifikat.php`: tambah semester, aktifkan (skor kembali 0), **tutup periode input**, buka kembali. `cek_input_semester()` membekukan catat poin, scan, izin, dan penilaian bulanan saat periode tertutup |
-| **Tahap 4 — Sertifikat** | Penerbitan per kelas/semua, kode **`SDP-TAHUNSEM-NIS-ACAK4`**, snapshot `data_json` yang tidak berubah, antrean WA, pembatalan dengan alasan + pelaku + waktu, `pages/umum/cetak_sertifikat.php` (**A4 landscape**, tabel 6 aspek, logo, tanda tangan, QR verifikasi). Tombol cetak siswa hanya aktif saat status `terbit`. `verifikasi.php` kini menyediakan pembatalan khusus admin |
+| **Tahap 4 — Sertifikat** | Penerbitan per kelas/semua, kode **`SDP-TAHUNSEM-NIS-ACAK4`**, snapshot `data_json` yang tidak berubah, antrean WA, pembatalan dengan alasan + pelaku + waktu, `pages/umum/cetak_sertifikat.php` (**A4 landscape**, tabel 6 aspek, logo, tanda tangan, QR verifikasi). Tombol cetak siswa/wali hanya aktif saat status `terbit` **dan** semester sudah berganti; sebelumnya sertifikat hanya bisa dilihat (bagian 16). `verifikasi.php` kini menyediakan pembatalan khusus admin |
 | **Tahap 4 — BK & kepsek** | `pages/bk/beranda.php`, `pages/kepsek/beranda.php` (**hanya baca**), `pages/bk/tindak_lanjut.php` (tindak lanjut + poin positif opsional), `pages/umum/laporan.php` (ringkasan per kelas/per aspek + unduh XLSX 3 lembar) |
 | **Tahap 5 — Portal wali** | `pages/wali/beranda.php`: hanya baca ringkasan anaknya (skor 6 aspek, kehadiran bulan ini, sertifikat, kartu QR). Admin menghubungkan akun lewat **Data siswa → Akun portal wali murid** |
 | **Pustaka QR lokal** | `public/js/qrcode.min.js` (qrcode-generator, MIT), `public/js/html5-qrcode.min.js` (Apache-2.0), `public/js/qr-sidipa.js`. Disertakan sebagai berkas statis, di-precache service worker, sehingga cetak dan scan tetap berfungsi tanpa akses CDN |
@@ -63,7 +63,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 8. **Jalankan `install.php`** dari browser. Periksa setiap baris pemeriksaan. Setelah semua hijau, **HAPUS `install.php`** dari File Manager.
 9. **Login pertama**: `https://domain/sidipa/pages/login.php` → user `admin`, kata sandi sementara **`SiDiPa@2026`**. Sistem memaksa penggantian kata sandi sebelum masuk ke menu lain. Setelah itu login tersimpan dan batas 30 hari otomatis diperpanjang setiap aplikasi dibuka (bagian 15.2); centang **Jangan simpan login di perangkat ini** bila memakai komputer bersama.
 10. **Isi data sekolah** di menu *Pengaturan* (nama sekolah, logo, tanda tangan), lalu tambah kelas, guru, dan siswa (manual atau impor CSV). Untuk portal wali: buat akun berperan **Wali murid** di menu *Pengguna*, lalu pilih akun itu pada kolom **Akun portal wali murid** di form *Data siswa*.
-11. **Alur akhir semester**: *Semester & Sertifikat* → **Tutup** periode input → periksa ringkasan → **Terbitkan sertifikat** (per kelas atau semua) → siswa mencetak lewat *Sertifikat Saya*. Kode sertifikat dapat diverifikasi publik tanpa login.
+11. **Alur akhir semester**: *Semester & Sertifikat* → **Tutup** periode input → periksa ringkasan → **Terbitkan sertifikat** (per kelas atau semua) → siswa **melihat** sertifikat lewat *Sertifikat Saya* dan baru dapat mencetak setelah semester baru diaktifkan. Kode sertifikat dapat diverifikasi publik tanpa login.
 
 ---
 
@@ -168,7 +168,7 @@ sidipa/
 - Skor dihitung **per aspek dan per semester**, mulai **0**, tanpa batas atas, boleh minus tanpa batas bawah. Semester baru kembali dari 0; data lama tetap tersimpan (diarsipkan lewat `semester_id`).
 - Skor aspek = jumlah `catatan_poin` berstatus `aktif`. Catatan dibatalkan tidak dihitung tetapi **tidak pernah dihapus** (jejak audit: alasan, pelaku, waktu).
 - Persentase = `skor / target_semester × 100`. Target bawaan 100 per aspek, dapat diubah admin.
-- Predikat per aspek: `>100` → **A+**, `90–100` → **A**, `75–89` → **B**, `60–74` → **C**, `0–59` → **D**, `<0` → **E**. Semua ambang ada di tabel `pengaturan`. **Tidak ada predikat keseluruhan.**
+- Predikat per aspek: `>100` → **A+**, `90–100` → **A**, `75–89` → **B**, `60–74` → **C**, `0–59` → **D**, `<0` → **E**. Semua ambang ada di tabel `pengaturan`. **Beranda siswa** kini juga menampilkan **rata-rata keseluruhan + predikat keseluruhan** dari rata-rata persentase 6 aspek; sertifikat tetap memakai predikat per aspek (bagian 16).
 - Sumber otomatis (`sumber = sistem`): terlambat −2, alpa −5, tidak sholat −3 per sholat; bonus pagi +1 setiap 5 hari awal (maks +10/semester) dari cron mingguan; minggu bersih +2, minggu penuh dhuha +2, minggu penuh dhuhur +2. Besar poin diambil dari **Pengaturan → Bobot poin otomatis**; katalog poin dipakai untuk identitas kejadian dan untuk catatan manual.
 - Pembatas pengurangan manual per aspek per hari (bawaan 10) tersedia lewat `pengurangan_manual_harian()`. Izin, sakit, dan udzur tidak pernah mengurangi poin.
 - **Dilarang** menampilkan peringkat siswa dengan skor terendah. `siswa_teladan()` hanya menampilkan peringkat positif.
@@ -217,14 +217,14 @@ Pesan **tidak dikirim saat scan**; scan memasukkan baris ke `notifikasi_wa` deng
 - [x] Hari libur dikelola admin dan dilewati cron/scan — `pages/admin/hari_libur.php`
 - [x] Rekap kehadiran harian/bulanan/semester per siswa dan per kelas + unduh XLSX — `app/laporan.php`, `app/xlsx.php`
 - [x] Admin menutup periode input; catat poin, scan, izin, dan penilaian bulanan dibekukan — `cek_input_semester()`
-- [x] Sertifikat hanya dapat dicetak setelah `terbit`; kode `SDP-...`, snapshot JSON, QR verifikasi, tanda tangan, A4 landscape — `pages/umum/cetak_sertifikat.php`
+- [x] Sertifikat siswa/wali hanya dapat dicetak setelah `terbit` **dan** semester berganti; kode `SDP-...`, snapshot JSON, QR verifikasi, tanda tangan, A4 landscape — `pages/umum/cetak_sertifikat.php`
 - [x] Admin membatalkan sertifikat (dari menu admin maupun verifikasi publik) dengan alasan, pelaku, dan waktu; verifikasi publik berubah menjadi "dibatalkan"
 - [x] Dashboard BK & kepala sekolah (kepsek hanya baca), laporan per kelas/aspek + XLSX, tindak lanjut dengan poin positif opsional
 - [x] Portal wali murid hanya menampilkan ringkasan anaknya; pencatat dan riwayat pelanggaran tidak pernah terkirim
 - [x] QR dibuat dan dipindai tanpa CDN, tersedia offline lewat service worker — `public/js/qr*.js`
 - [x] Mode **catat banyak siswa sekaligus untuk satu kejadian** (§10) dengan cap harian per siswa dan transaksi all-or-nothing — `pages/guru/catat_banyak.php`
 - [x] Dashboard siswa memuat **grafik perkembangan mingguan** SVG inline 8 minggu (§10), hanya angka agregat tanpa nama pencatat
-- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan + **55/55** uji pembaruan (termasuk sliding 30 hari) = **211/211** lulus pada preview PHP 8.3 + MySQL 5.7
+- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan + **55/55** uji pembaruan (termasuk sliding 30 hari) + **35/35** uji fitur siswa = **246/246** lulus pada preview PHP 8.3 + MySQL 5.7
 
 ---
 
@@ -293,14 +293,14 @@ Semua URL PWA relatif terhadap lokasi aplikasi: manifest memakai `scope: "./"`, 
 | Tandai libur sekolah | **Admin → Hari Libur** → isi tanggal/rentang + keterangan. Cron harian/mingguan dan scan melewati tanggal tersebut |
 | Rekap kehadiran | **Rekap Kehadiran** → pilih Harian / Bulanan / Semester, kelas (bila berhak), lalu **Unduh XLSX** |
 | Akhir semester | **Admin → Semester & Sertifikat** → **Tutup** semester berjalan (input poin/scan/izin/penilaian langsung dibekukan) → **Terbitkan sertifikat** per kelas atau semua |
-| Cetak sertifikat | Siswa: **Sertifikat saya → Cetak** (A4 landscape). Admin/BK/kepsek: tautan **Cetak** pada daftar sertifikat. Wali murid: tautan cetak pada beranda portal |
+| Cetak sertifikat | Siswa/wali: **Sertifikat saya → Lihat** selama semester masih berjalan; setelah admin mengaktifkan semester baru muncul tombol **Cetak** (A4 landscape). Admin/BK/kepsek tetap dapat mencetak kapan saja |
 | Verifikasi eksternal | Pindai QR di sertifikat atau buka `verifikasi.php?kode=...`; tanpa login, hanya status + identitas + skor per aspek |
 | Sertifikat salah | Admin membatalkan lewat daftar sertifikat **atau** halaman verifikasi publik, wajib alasan. Status publik berubah jadi *dibatalkan* dan tombol cetak nonaktif |
 | Semester baru | **Tambah semester** → **Aktifkan**. Skor kembali 0 karena semua perhitungan memakai `semester_id`; data lama tetap tersimpan |
 | Pendampingan BK | **BK → Tindak Lanjut**: pilih siswa, isi pemicu/tindakan/status; centang poin positif bila ada kegiatan perbaikan |
 | Wali murid | Buat akun peran **Wali murid** di *Pengguna*, tautkan di *Data siswa*. Portal hanya menampilkan ringkasan anaknya |
 
-**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **63 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **211 pemeriksaan fungsional lulus (126 + 13 + 17 + 55)**.
+**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **63 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **246 pemeriksaan fungsional lulus (126 + 13 + 17 + 55 + 35)**, termasuk uji degradasi saat kolom `foto` belum ada.
 
 ---
 
@@ -397,3 +397,61 @@ Log aktivitas memakai `ekspor_xlsx_kehadiran` / `ekspor_xlsx_laporan`. Berkas di
 **Database: TIDAK ADA MIGRASI / `ALTER TABLE`.** Kolom `ingat_login.kedaluwarsa` yang sudah ada kini dipakai sebagai penanda "aktivitas terakhir + 30 hari"; nilainya digeser, bukan ditambah kolom baru. Cukup unggah `app/auth.php` (dan `pages/login.php` bila ingin teks bantuan ikut berubah).
 
 > Catatan: bila server Anda **belum** punya tabel `ingat_login` (belum menerapkan pembaruan login persisten sebelumnya), jalankan dulu `CREATE TABLE` pada bagian 15.2. `install.php` akan menandainya sebagai belum tersedia.
+
+
+---
+
+## 16. Pembaruan beranda siswa, menu, sertifikat, dan foto profil
+
+### 16.1 Nilai rata-rata keseluruhan + predikat di beranda siswa
+
+`pages/siswa/beranda.php` kini punya kartu **"Nilai keseluruhan"** di atas grid skor per aspek, berisi:
+
+| Kolom | Isi |
+| --- | --- |
+| Rata-rata keseluruhan poin | Rata-rata **persentase capaian** dari 6 aspek terhadap target semester (tiap aspek berbobot sama), ditampilkan dalam persen |
+| Predikat keseluruhan | `A+ / A / B / C / D / E` + keterangan, dari `predikat_dari_persentase()` pada nilai rata-rata tersebut |
+| Rincian angka | Total poin, total target, dan rata-rata poin mentah per aspek |
+
+Helper baru: `ringkasan_skor_siswa(array $skor)` di `app/skor.php`. **Sertifikat tetap memakai predikat per aspek** — agregat ini khusus untuk tampilan beranda siswa, sesuai permintaan.
+
+### 16.2 Kaji ulang menu bawah akun siswa
+
+Item **"Siswa"** pada navigasi bawah sebelumnya menuju `pages/umum/siswa.php`, padahal siswa hanya boleh melihat datanya sendiri — sehingga hampir tidak berguna. Untuk peran `siswa`, item itu **diganti menjadi "Sertifikat"** (`pages/siswa/sertifikat.php`, ikon sertifikat) lewat `menu_bawah_peran()` di `app/layout.php`. Menu bawah siswa sekarang: **Beranda · Sertifikat · Rekap · Profil**. Peran lain tidak berubah.
+
+### 16.3 Siswa hanya bisa lihat sertifikat sebelum semester berganti
+
+- Selama semester sertifikat masih menjadi semester aktif, siswa **dan wali murid** hanya mendapat tautan **Lihat**: sertifikat tampil di `pages/umum/cetak_sertifikat.php`, tetapi tombol cetak tidak ada dan `@media print` menyembunyikan kertas sertifikat (Ctrl+P tidak menghasilkan sertifikat).
+- Cetak baru tersedia setelah **admin mengaktifkan semester baru** yang berbeda dari semester sertifikat. Penentunya: `sertifikat_sudah_ganti_semester()` di `app/sertifikat.php` mencari baris `semester.aktif = 1` dengan `id` berbeda.
+- Admin, BK, dan kepala sekolah **tidak terkena** penahanan ini. Sertifikat berstatus `dibatalkan` tetap tidak dapat dicetak oleh siapa pun.
+- Daftar sertifikat (`sertifikat_siswa()`) sekarang ikut mengembalikan `semester_id`.
+
+### 16.4 Upload foto profil
+
+- Kolom baru **`pengguna.foto`** menyimpan path relatif; formulir **Profil → Foto saya** menerima JPG/PNG/WEBP (validasi `getimagesize()`, nama acak, maksimal 2 MB lewat pengaturan `maks_ukuran_foto`), lengkap dengan tombol **Hapus foto**. Foto lama otomatis dihapus dari `public/uploads/` saat diganti.
+- `public/uploads/.htaccess` sudah melarang eksekusi PHP. Foto tampil di kartu sapaan **beranda siswa**, avatar header, dan halaman Profil; bila belum ada, dipakai inisial nama.
+- Form tersedia untuk **semua peran** (termasuk akun siswa), karena kolomnya berada di tabel `pengguna`.
+
+### 16.5 Berkas & database yang perlu diganti
+
+| Berkas | Wajib? | Isi perubahan |
+| --- | --- | --- |
+| `app/skor.php` | **WAJIB** | `ringkasan_skor_siswa()` |
+| `app/sertifikat.php` | **WAJIB** | `sertifikat_sudah_ganti_semester()`, `sertifikat_peran_terbatas()`, `semester_id` pada `sertifikat_siswa()` |
+| `app/helpers.php` | **WAJIB** | `unggah_foto_profil()`, `hapus_berkas_foto()`, `foto_pengguna()` |
+| `app/layout.php` | **WAJIB** | `menu_bawah_peran()`, avatar foto, penanda menu aktif |
+| `pages/siswa/beranda.php` | **WAJIB** | kartu ringkasan + foto |
+| `pages/profil.php` | **WAJIB** | form unggah/hapus foto |
+| `pages/siswa/sertifikat.php`, `pages/wali/beranda.php`, `pages/umum/cetak_sertifikat.php` | **WAJIB** | penahanan cetak |
+| `pages/umum/cetak_sertifikat.php` | (sudah termasuk) | pesan status + `cetak-terkunci` |
+| `public/css/sidipa.css`, `public/css/cetak.css` | Disarankan | gaya kartu ringkasan/foto + blokir Ctrl+P |
+| `database.sql`, `install.php`, `README.md` | Disarankan | skema & pemeriksaan & dokumentasi |
+
+**Database: ADA SATU MIGRASI.** Untuk instalasi yang sudah berjalan, jalankan sekali di phpMyAdmin (aman diulang dengan pengecekan kolom terlebih dahulu):
+
+```sql
+ALTER TABLE pengguna
+  ADD COLUMN foto VARCHAR(255) DEFAULT NULL AFTER nama;
+```
+
+`install.php` kini memeriksa kolom ini. **Bila ALTER belum dijalankan, aplikasi tidak rusak**: `foto_pengguna()` menangani kegagalan query dengan kembali ke inisial nama, sehingga semua halaman tetap dapat dibuka; hanya penyimpanan foto yang belum berfungsi. `database.sql` yang baru sudah memuat kolom ini untuk instalasi baru. Tidak ada perubahan pada tabel `sertifikat`, `semester`, atau `siswa`.

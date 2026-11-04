@@ -254,6 +254,79 @@ function normalisasi_nomor_wa(string $nomor): string
     return $nomor;
 }
 
+
+
+/**
+ * Unggah foto profil akun. Mengembalikan path relatif `public/uploads/...`.
+ * Validasi MIME memakai getimagesize() pada berkas sementara agar konten
+ * berbahaya yang berganti ekstensi tetap ditolak.
+ */
+/**
+ * Baca path foto profil. Aman bila instalasi lama belum menjalankan
+ * ALTER TABLE: cukup kembali ke inisial, pengguna tidak terkunci.
+ */
+function foto_pengguna(int $penggunaId): string
+{
+    if ($penggunaId <= 0) {
+        return '';
+    }
+    try {
+        return (string) (db_nilai(
+            'SELECT foto FROM pengguna WHERE id = ? LIMIT 1', [$penggunaId], ''
+        ) ?? '');
+    } catch (Throwable $galat) {
+        return '';
+    }
+}
+
+function unggah_foto_profil(array $berkas): array
+{
+    if (empty($berkas) || (int) ($berkas['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => false, 'path' => null, 'pesan' => 'Pilih berkas foto terlebih dahulu.'];
+    }
+    if ((int) ($berkas['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'path' => null, 'pesan' => 'Foto gagal diunggah. Silakan coba lagi.'];
+    }
+    $maks = (int) pengaturan('maks_ukuran_foto', (string) SIDIPA_MAKS_BUKTI);
+    $ukuran = (int) ($berkas['size'] ?? 0);
+    if ($ukuran < 1 || $ukuran > $maks) {
+        return ['ok' => false, 'path' => null, 'pesan' => 'Ukuran foto maksimal '
+            . round($maks / 1048576, 1) . ' MB.'];
+    }
+    $info = @getimagesize((string) ($berkas['tmp_name'] ?? ''));
+    $mime = is_array($info) ? (string) ($info['mime'] ?? '') : '';
+    $izin = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    if (!isset($izin[$mime])) {
+        return ['ok' => false, 'path' => null, 'pesan' => 'Foto harus berupa JPG, PNG, atau WEBP.'];
+    }
+    if (!is_dir(SIDIPA_DIR_UPLOAD) && !@mkdir(SIDIPA_DIR_UPLOAD, 0755, true)) {
+        return ['ok' => false, 'path' => null, 'pesan' => 'Folder unggahan tidak dapat disiapkan.'];
+    }
+    $nama = 'foto-' . date('Ymd') . '-' . bin2hex(random_bytes(10)) . '.' . $izin[$mime];
+    $tujuan = rtrim(SIDIPA_DIR_UPLOAD, '/') . '/' . $nama;
+    if (!@move_uploaded_file((string) $berkas['tmp_name'], $tujuan)) {
+        return ['ok' => false, 'path' => null, 'pesan' => 'Foto gagal disimpan.'];
+    }
+    @chmod($tujuan, 0644);
+    return ['ok' => true, 'path' => 'public/uploads/' . $nama, 'pesan' => ''];
+}
+
+/** Hapus berkas foto lama, hanya bila namanya sesuai pola yang kita buat. */
+function hapus_berkas_foto(?string $path): void
+{
+    if ($path === null || $path === '') {
+        return;
+    }
+    $nama = basename($path);
+    if (preg_match('/^foto-[0-9]{8}-[a-f0-9]{20}\.(jpg|png|webp)$/', $nama) !== 1) {
+        return;
+    }
+    $berkas = rtrim(SIDIPA_DIR_UPLOAD, '/') . '/' . $nama;
+    if (is_file($berkas)) {
+        @unlink($berkas);
+    }
+}
+
 function inisial(string $nama): string
 {
     $bagian = preg_split('/\s+/', trim($nama), -1, PREG_SPLIT_NO_EMPTY);

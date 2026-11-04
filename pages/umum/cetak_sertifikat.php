@@ -4,6 +4,7 @@ declare(strict_types=1);
 /*
  | Tahap 4 — Cetak sertifikat A4 landscape (CSS @page, tanpa library PDF).
  | HANYA sertifikat berstatus `terbit` yang boleh dicetak.
+ | Siswa / wali: cetak ditahan sampai admin mengaktifkan semester baru.
  | Akses: admin / BK / kepala sekolah (semua), siswa / wali (anaknya sendiri).
  | Data diambil dari SNAPSHOT data_json, bukan skor berjalan, sehingga nilai
  | tidak berubah bila ada catatan baru setelah penerbitan.
@@ -51,6 +52,12 @@ $gambar = static function (string $jalur) use ($sekolah): string {
 };
 
 $sah = (string) $sertifikat['status'] === 'terbit';
+// Siswa/wali hanya boleh MELIHAT sampai semester sertifikat digantikan
+// semester aktif yang baru. Peran lain tetap dapat mencetak seperti biasa.
+$terbatas = sertifikat_peran_terbatas($peran);
+$bolehCetak = $sah && (!$terbatas
+    || sertifikat_sudah_ganti_semester((int) ($sertifikat['semester_id'] ?? 0)));
+$terkunci = $sah && !$bolehCetak;
 $urlVerifikasi = url_publik('verifikasi.php?kode=' . rawurlencode((string) $sertifikat['kode']));
 $urlKembali = $peran === 'siswa' || $peran === 'wali'
     ? 'pages/siswa/sertifikat.php'
@@ -67,10 +74,13 @@ $urlKembali = $peran === 'siswa' || $peran === 'wali'
   <link rel="stylesheet" href="<?= e(asset('css/sidipa.css')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/cetak.css')) ?>">
 </head>
-<body class="cetak-sertifikat">
+<body class="cetak-sertifikat<?= $terkunci ? ' cetak-terkunci' : '' ?>">
   <div class="cetak-alat">
     <p class="petunjuk-cetak">
-      <?php if ($sah): ?>
+      <?php if ($terkunci): ?>
+        Sertifikat <strong><?= e($sertifikat['kode']) ?></strong> berstatus <strong>TERBIT</strong> dan dapat <strong>dilihat</strong>.
+        Cetak belum tersedia karena semester sertifikat masih berjalan; tombol cetak aktif setelah admin mengaktifkan semester baru.
+      <?php elseif ($sah): ?>
         Sertifikat <strong><?= e($sertifikat['kode']) ?></strong> berstatus <strong>TERBIT</strong>.
         Cetak dengan kertas <strong>A4 landscape</strong>, skala 100%, dan matikan header/footer browser.
       <?php else: ?>
@@ -78,7 +88,7 @@ $urlKembali = $peran === 'siswa' || $peran === 'wali'
       <?php endif; ?>
     </p>
     <div class="baris-tombol">
-      <?php if ($sah): ?>
+      <?php if ($bolehCetak): ?>
         <button class="tombol tombol-utama" type="button" data-cetak><?= ikon('cetak', 20) ?> Cetak / Simpan PDF</button>
       <?php endif; ?>
       <a class="tombol tombol-putih" href="<?= e(url($urlKembali)) ?>"><?= ikon('panah_kiri', 18) ?> Kembali</a>
@@ -124,7 +134,7 @@ $urlKembali = $peran === 'siswa' || $peran === 'wali'
           <?php if ($aspek === []): ?><tr><td colspan="5">Data aspek belum tersedia.</td></tr><?php endif; ?>
           </tbody>
         </table>
-        <p class="subjudul-sertifikat" style="margin:0 0 5mm;text-align:left">Penilaian dilakukan per aspek. Tidak ada predikat keseluruhan.</p>
+        <p class="subjudul-sertifikat" style="margin:0 0 5mm;text-align:left">Predikat pada sertifikat dihitung per aspek terhadap target semester.</p>
 
         <footer class="kaki-sertifikat">
           <div>

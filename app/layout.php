@@ -59,6 +59,25 @@ function menu_bawah_utama(): array
     ];
 }
 
+/**
+ * Menu bawah disesuaikan per peran. Untuk siswa, item "Siswa" (daftar data
+ * siswa yang hanya berisi dirinya sendiri) diganti menjadi "Sertifikat".
+ */
+function menu_bawah_peran(string $peran): array
+{
+    $menu = menu_bawah_utama();
+    if ($peran === 'siswa') {
+        foreach ($menu as $i => $item) {
+            if ($item['id'] === 'siswa') {
+                $menu[$i]['label'] = 'Sertifikat';
+                $menu[$i]['ikon'] = 'sertifikat';
+                $menu[$i]['url'] = 'pages/siswa/sertifikat.php';
+            }
+        }
+    }
+    return $menu;
+}
+
 function nav_aktif_dari_skrip(): string
 {
     $skrip = strtolower(basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')));
@@ -184,7 +203,11 @@ function halaman_atas(string $judul, string $keterangan = '', array $opsi = []):
         echo '<span class="lencana">' . $belum . '</span>';
     }
     echo '</a>';
-    echo '<a class="avatar" href="' . e(url('pages/profil.php')) . '" aria-label="Profil ' . e($nama) . '">' . e(inisial($nama)) . '</a>';
+    $foto = foto_pengguna((int) ($pengguna['id'] ?? 0));
+    $isiAvatar = $foto !== ''
+        ? '<img src="' . e(url($foto)) . '" alt="" width="42" height="42">'
+        : e(inisial($nama));
+    echo '<a class="avatar" href="' . e(url('pages/profil.php')) . '" aria-label="Profil ' . e($nama) . '">' . $isiAvatar . '</a>';
     echo '</div></header><main class="isi-halaman" id="konten">';
 
     if (empty($opsi['tanpa_judul'])) {
@@ -208,8 +231,12 @@ function halaman_bawah(): void
 {
     $peran = auth_peran();
     $aktif = nav_aktif_dari_skrip();
+    if ($aktif === '' && $peran === 'siswa'
+        && str_contains(strtolower(basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''))), 'sertifikat')) {
+        $aktif = 'siswa';
+    }
     echo '</main><nav class="nav-bawah" aria-label="Navigasi bawah">';
-    foreach (menu_bawah_utama() as $item) {
+    foreach (menu_bawah_peran($peran) as $item) {
         $tujuan = $item['url'];
         if ($item['id'] === 'beranda') {
             $tujuan = auth_landing($peran);

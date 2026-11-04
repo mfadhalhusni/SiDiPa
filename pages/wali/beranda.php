@@ -78,9 +78,11 @@ halaman_atas('Beranda Wali Murid', 'Ringkasan anak', ['nav' => 'beranda']);
           <td class="mono teks-kecil"><?= e($sr['kode']) ?></td>
           <td><span class="chip <?= $sah ? 'badge-tosca' : 'badge-koral' ?>"><?= $sah ? 'Terbit' : 'Dibatalkan' ?></span></td>
           <td>
+            <?php $bolehCetak = $sah && sertifikat_sudah_ganti_semester((int) ($sr['semester_id'] ?? 0)); ?>
             <?php if ($sah): ?>
-              <a class="tombol tombol-kecil tombol-utama" href="<?= e(url('pages/umum/cetak_sertifikat.php?kode=' . rawurlencode((string) $sr['kode']))) ?>"><?= ikon('cetak', 16) ?> Cetak</a>
+              <a class="tombol tombol-kecil <?= $bolehCetak ? 'tombol-utama' : 'tombol-putih' ?>" href="<?= e(url('pages/umum/cetak_sertifikat.php?kode=' . rawurlencode((string) $sr['kode']))) ?>"><?= ikon($bolehCetak ? 'cetak' : 'mata', 16) ?> <?= $bolehCetak ? 'Cetak' : 'Lihat' ?></a>
               <a class="tombol tombol-kecil tombol-putih" href="<?= e(url('verifikasi.php?kode=' . rawurlencode((string) $sr['kode']))) ?>" aria-label="Verifikasi publik"><?= ikon('mata', 16) ?></a>
+              <?php if (!$bolehCetak): ?><br><span class="teks-kecil">Cetak dibuka setelah semester berganti</span><?php endif; ?>
             <?php else: ?><span class="teks-kecil">Cetak tidak tersedia</span><?php endif; ?>
           </td>
         </tr>

@@ -54,6 +54,19 @@ try {
                 ? 'Cookie "ingat saya" siap dipakai.'
                 : 'Belum ada. Jalankan CREATE TABLE ingat_login dari bagian 15 README agar login tersimpan 30 hari.'
         );
+        $kolomFoto = (int) db_nilai(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND table_name = 'pengguna' AND column_name = 'foto'",
+            [],
+            0
+        );
+        tambah_cek(
+            'Kolom pengguna.foto (foto profil)',
+            $kolomFoto > 0,
+            $kolomFoto > 0
+                ? 'Unggah foto profil siap dipakai.'
+                : 'Belum ada. Jalankan ALTER TABLE pada bagian 16 README agar siswa dapat mengunggah foto profil.'
+        );
     }
 } catch (Throwable $galat) {
     tambah_cek('Koneksi database', false, 'Gagal: ' . $galat->getMessage());

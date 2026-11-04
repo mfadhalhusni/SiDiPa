@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 /*
  | Tahap 4 — Daftar sertifikat siswa (dapat dibuka wali murid untuk anaknya).
- | Tombol cetak HANYA aktif untuk sertifikat berstatus `terbit`.
+ | Siswa/wali HANYA bisa melihat sertifikat selama semester sertifikat masih
+ | aktif. Cetak baru tersedia setelah admin mengaktifkan semester baru.
  */
 
 require_once __DIR__ . '/../../app/bootstrap.php';
@@ -25,7 +26,7 @@ halaman_atas('Sertifikat Saya', 'Akhir semester', ['nav' => 'beranda']);
   </section>
 
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-    <span>Sertifikat diterbitkan admin setelah periode input semester ditutup. Nilai yang tercetak adalah snapshot saat terbit dan tidak berubah bila ada catatan baru.</span>
+    <span>Sertifikat diterbitkan admin setelah periode input semester ditutup. Nilai yang tercetak adalah snapshot saat terbit. <strong>Selama semester ini masih berjalan Anda hanya dapat melihat sertifikat; tombol cetak baru tersedia setelah semester berganti.</strong></span>
   </div>
 
   <div class="tabel-bungkus">
@@ -33,7 +34,10 @@ halaman_atas('Sertifikat Saya', 'Akhir semester', ['nav' => 'beranda']);
       <thead><tr><th>Semester</th><th>Kode</th><th>Tanggal terbit</th><th>Status</th><th>Aksi</th></tr></thead>
       <tbody>
       <?php foreach ($daftar as $sr): ?>
-        <?php $sah = (string) $sr['status'] === 'terbit'; ?>
+        <?php
+        $sah = (string) $sr['status'] === 'terbit';
+        $bolehCetak = $sah && sertifikat_sudah_ganti_semester((int) ($sr['semester_id'] ?? 0));
+        ?>
         <tr>
           <td><strong><?= e($sr['semester']) ?></strong><br><span class="teks-kecil mono"><?= e($sr['tahun_ajaran']) ?></span></td>
           <td class="mono teks-kecil"><?= e($sr['kode']) ?></td>
@@ -41,8 +45,9 @@ halaman_atas('Sertifikat Saya', 'Akhir semester', ['nav' => 'beranda']);
           <td><span class="chip <?= $sah ? 'badge-toska' : 'badge-koral' ?>"><?= $sah ? 'Terbit' : 'Dibatalkan' ?></span></td>
           <td>
             <?php if ($sah): ?>
-              <a class="tombol tombol-kecil tombol-utama" href="<?= e(url('pages/umum/cetak_sertifikat.php?kode=' . rawurlencode((string) $sr['kode']))) ?>"><?= ikon('cetak', 16) ?> Cetak</a>
+              <a class="tombol tombol-kecil <?= $bolehCetak ? 'tombol-utama' : 'tombol-putih' ?>" href="<?= e(url('pages/umum/cetak_sertifikat.php?kode=' . rawurlencode((string) $sr['kode']))) ?>"><?= ikon($bolehCetak ? 'cetak' : 'mata', 16) ?> <?= $bolehCetak ? 'Cetak' : 'Lihat' ?></a>
               <a class="tombol tombol-kecil tombol-putih" href="<?= e(url('verifikasi.php?kode=' . rawurlencode((string) $sr['kode']))) ?>" aria-label="Verifikasi publik"><?= ikon('mata', 16) ?></a>
+              <?php if (!$bolehCetak): ?><br><span class="teks-kecil">Cetak dibuka setelah semester berganti</span><?php endif; ?>
             <?php else: ?>
               <span class="teks-kecil">Cetak tidak tersedia</span>
             <?php endif; ?>

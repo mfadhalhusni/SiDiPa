@@ -225,7 +225,8 @@ function batalkan_sertifikat(int $id, int $oleh, string $alasan): array
 function sertifikat_siswa(int $siswaId): array
 {
     return db_semua(
-        'SELECT sr.id, sr.kode, sr.status, sr.tanggal_terbit, sm.nama AS semester, sm.tahun_ajaran
+        'SELECT sr.id, sr.semester_id, sr.kode, sr.status, sr.tanggal_terbit,
+                sm.nama AS semester, sm.tahun_ajaran
          FROM sertifikat sr JOIN semester sm ON sm.id = sr.semester_id
          WHERE sr.siswa_id = ? ORDER BY sr.tanggal_terbit DESC, sr.id DESC',
         [$siswaId]
@@ -233,6 +234,37 @@ function sertifikat_siswa(int $siswaId): array
 }
 
 /** Sertifikat lengkap berdasar kode, untuk halaman cetak (butuh login). */
+
+
+/**
+ * KEBIJAKAN SEKOLAH — siswa dan wali murid hanya dapat MELIHAT sertifikat
+ * selama semester sertifikat masih menjadi semester aktif. Cetak baru boleh
+ * dipakai setelah "semester berganti", yaitu setelah admin mengaktifkan
+ * semester lain (aktif = 1) yang berbeda dari semester sertifikat.
+ * Admin, BK, dan kepala sekolah tidak terkena batasan ini.
+ */
+function sertifikat_sudah_ganti_semester(int $semesterId): bool
+{
+    if ($semesterId <= 0) {
+        return false;
+    }
+    try {
+        $aktif = db_satu(
+            'SELECT id FROM semester WHERE aktif = 1 ORDER BY tgl_mulai DESC, id DESC LIMIT 1'
+        );
+    } catch (Throwable $galat) {
+        catat_kesalahan('sertifikat_sudah_ganti_semester gagal: ' . $galat->getMessage());
+        return false;
+    }
+    return $aktif !== null && (int) $aktif['id'] !== $semesterId;
+}
+
+/** Apakah peran ini terkena penahanan cetak sampai semester berganti? */
+function sertifikat_peran_terbatas(string $peran): bool
+{
+    return in_array($peran, ['siswa', 'wali'], true);
+}
+
 function sertifikat_dari_kode(string $kode): ?array
 {
     return $kode === '' ? null : db_satu(

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS pengguna (
   username VARCHAR(60) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   nama VARCHAR(120) NOT NULL,
+  foto VARCHAR(255) DEFAULT NULL,
   peran ENUM('admin','guru','bk','kepsek','siswa','wali') NOT NULL,
   aktif TINYINT(1) NOT NULL DEFAULT 1,
   wajib_ganti_password TINYINT(1) NOT NULL DEFAULT 0,

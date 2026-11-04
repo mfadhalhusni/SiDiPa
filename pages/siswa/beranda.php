@@ -18,19 +18,47 @@ if ($siswa !== null && $semesterId > 0) {
     $mingguan = grafik_mingguan_siswa((int) $siswa['id'], $semesterId, 8);
 }
 $warna = ['bg-koral', 'bg-kuning', 'bg-toska', 'bg-ungu', 'bg-oranye', 'bg-biru'];
+$ringkasan = ringkasan_skor_siswa($skor);
+$foto = foto_pengguna((int) $pengguna['id']);
 
 halaman_atas('Beranda siswa', '', ['nav' => 'beranda']);
 ?>
 <?php if ($siswa === null): ?>
   <div class="pesan pesan-galat" role="alert"><?= ikon('peringatan', 20) ?><span>Akun siswa belum terhubung ke data siswa. Hubungi admin.</span></div>
 <?php else: ?>
-  <section class="kartu bg-ungu margin-bawah">
-    <p class="label-kecil">Halo, <?= e($siswa['nama']) ?>!</p>
-    <h2 style="margin:0"><?= e($siswa['kelas'] ?? 'Kelas belum diatur') ?></h2>
-    <p class="teks-kecil" style="margin:4px 0 0">NIS <?= e($siswa['nis']) ?> · <?= e($semester['nama'] ?? 'Semester belum aktif') ?></p>
+  <section class="kartu bg-ungu margin-bawah kartu-sapa-siswa">
+    <?php if ($foto !== ''): ?>
+      <img class="foto-profil" src="<?= e(url($foto)) ?>" alt="Foto profil <?= e($siswa['nama']) ?>">
+    <?php else: ?>
+      <span class="foto-profil foto-inisial" aria-hidden="true"><?= e(inisial($siswa['nama'])) ?></span>
+    <?php endif; ?>
+    <div class="sapa-siswa">
+      <p class="label-kecil">Halo, <?= e($siswa['nama']) ?>!</p>
+      <h2 style="margin:0"><?= e($siswa['kelas'] ?? 'Kelas belum diatur') ?></h2>
+      <p class="teks-kecil" style="margin:4px 0 0">NIS <?= e($siswa['nis']) ?> · <?= e($semester['nama'] ?? 'Semester belum aktif') ?></p>
+    </div>
   </section>
 
-  <?= bagian_judul('Skor karakter saya', 'Predikat dihitung per aspek terhadap target semester.') ?>
+  <?= bagian_judul('Nilai keseluruhan', 'Rata-rata capaian seluruh aspek pada semester berjalan.') ?>
+  <section class="kartu kartu-ringkasan margin-bawah" aria-label="Rata-rata dan predikat keseluruhan">
+    <div class="ringkasan-sel">
+      <p class="label-kecil">Rata-rata keseluruhan poin</p>
+      <p class="ringkasan-angka mono"><?= e(number_format((float) $ringkasan['rata_persen'], 1, ',', '.')) ?>%</p>
+      <p class="teks-kecil" style="margin:4px 0 0">Rata-rata persentase capaian <?= (int) $ringkasan['jumlah_aspek'] ?> aspek terhadap target semester.</p>
+    </div>
+    <div class="ringkasan-sel ringkasan-tengah">
+      <p class="label-kecil">Predikat keseluruhan</p>
+      <span class="predikat"><?= e($ringkasan['predikat']) ?></span>
+      <p class="teks-kecil" style="margin:4px 0 0"><?= e($ringkasan['keterangan']) ?></p>
+    </div>
+    <div class="ringkasan-sel">
+      <p class="label-kecil">Rincian angka</p>
+      <p class="teks-kecil" style="margin:6px 0 0">Total poin: <strong class="mono"><?= (int) $ringkasan['total_poin'] ?></strong> dari target <strong class="mono"><?= (int) $ringkasan['total_target'] ?></strong></p>
+      <p class="teks-kecil" style="margin:4px 0 0">Rata-rata poin per aspek: <strong class="mono"><?= e(number_format((float) $ringkasan['rata_poin'], 1, ',', '.')) ?></strong></p>
+    </div>
+  </section>
+
+  <?= bagian_judul('Skor karakter saya', 'Predikat per aspek terhadap target semester.') ?>
   <div class="skor-grid">
     <?php foreach ($skor as $i => $s): ?>
       <div class="kartu kartu-skor <?= e($warna[$i % count($warna)]) ?>">

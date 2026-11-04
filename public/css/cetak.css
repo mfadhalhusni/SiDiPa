@@ -45,6 +45,14 @@ table.sertifikat-skor td.predikat { font-weight: 700; font-size: 12pt; text-alig
 .tanda-tangan .nama { font-weight: 700; text-decoration: underline; }
 .tombol-cetak { display: inline-flex; }
 @media print { .tombol-cetak, .petunjuk-cetak, .cetak-alat { display: none !important; } }
+/* Siswa/wali yang belum boleh cetak tidak boleh mencetak lewat Ctrl+P. */
+@media print {
+  body.cetak-terkunci .kertas-sertifikat { display: none !important; }
+  body.cetak-terkunci::after {
+    content: "Sertifikat belum dapat dicetak sebelum semester berganti.";
+    display: block; font: 700 16pt Arial, sans-serif; text-align: center;
+  }
+}
 @media screen {
   body.cetak-sertifikat { padding: 20px; background: #FFF3E4 !important; }
   .kertas-sertifikat { max-width: 297mm; margin: 0 auto 20px; box-shadow: 6px 6px 0 #000; background: #fff; }
