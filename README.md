@@ -12,7 +12,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | --- | --- |
 | Struktur | `index.php`, `config.php`, `database.sql`, `install.php`, `verifikasi.php`, `app/`, `pages/`, `api/`, `cron/`, `public/`, `contoh/` |
 | Database | 22 tabel InnoDB utf8mb4 + kunci asing + indeks (termasuk `ingat_login`); 6 aspek, 36 katalog poin bawaan, 2 jenis ibadah, 52 pengaturan, 1 semester contoh, akun admin |
-| Login & peran | `password_hash`/`password_verify`, regenerasi ID sesi, cookie `HttpOnly` + `SameSite=Lax` + `secure` otomatis, **login sekali tersimpan 30 hari** (cookie `SIDIPAINGAT`, hanya hash token di DB, rotasi tiap pakai, dicabut saat logout/ganti sandi), opsi **Jangan simpan login di perangkat ini**, pembatasan 5 percobaan gagal / 15 menit, wajib ganti kata sandi saat login pertama, pemeriksaan peran di server |
+| Login & peran | `password_hash`/`password_verify`, regenerasi ID sesi, cookie `HttpOnly` + `SameSite=Lax` + `secure` otomatis, **login sekali, 30 hari sejak aktivitas terakhir** (cookie `SIDIPAINGAT`, hanya hash token di DB, rotasi tiap pakai, batas bergulir otomatis saat aplikasi dibuka, dicabut saat logout/ganti sandi), opsi **Jangan simpan login di perangkat ini**, pembatasan 5 percobaan gagal / 15 menit, wajib ganti kata sandi saat login pertama, pemeriksaan peran di server |
 | Data master | CRUD siswa + akun siswa otomatis, CRUD kelas + wali kelas + guru pengampu, CRUD pengguna, CRUD katalog poin, impor CSV dengan pratinjau |
 | Pengaturan | Semua jam, bobot poin otomatis, target aspek, ambang predikat/pembinaan, poin penilaian bulanan, identitas sekolah, tanda tangan, dan konfigurasi WA lewat satu halaman admin |
 | Skor | `skor_per_aspek()` mulai dari 0 per semester, tanpa batas atas, boleh minus; predikat **per aspek** (A+/A/B/C/D/E) terhadap target aspek |
@@ -61,7 +61,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 6. **Hak akses folder**: `public/uploads` → 755 dan dapat ditulis; `storage/logs` → 750 dan dapat ditulis. `public/uploads/.htaccess` sudah melarang eksekusi PHP; `storage/.htaccess` dan `cron/.htaccess` sudah menolak akses browser.
 7. **Aktifkan HTTPS**: cPanel → *AutoSSL* / *SSL/TLS Status*, lalu arahkan semua traffic ke HTTPS. HTTPS wajib untuk service worker, kamera pemindai QR, dan tombol pasang PWA (lihat bagian 12).
 8. **Jalankan `install.php`** dari browser. Periksa setiap baris pemeriksaan. Setelah semua hijau, **HAPUS `install.php`** dari File Manager.
-9. **Login pertama**: `https://domain/sidipa/pages/login.php` → user `admin`, kata sandi sementara **`SiDiPa@2026`**. Sistem memaksa penggantian kata sandi sebelum masuk ke menu lain. Setelah itu login tersimpan 30 hari di perangkat; centang **Jangan simpan login di perangkat ini** bila memakai komputer bersama.
+9. **Login pertama**: `https://domain/sidipa/pages/login.php` → user `admin`, kata sandi sementara **`SiDiPa@2026`**. Sistem memaksa penggantian kata sandi sebelum masuk ke menu lain. Setelah itu login tersimpan dan batas 30 hari otomatis diperpanjang setiap aplikasi dibuka (bagian 15.2); centang **Jangan simpan login di perangkat ini** bila memakai komputer bersama.
 10. **Isi data sekolah** di menu *Pengaturan* (nama sekolah, logo, tanda tangan), lalu tambah kelas, guru, dan siswa (manual atau impor CSV). Untuk portal wali: buat akun berperan **Wali murid** di menu *Pengguna*, lalu pilih akun itu pada kolom **Akun portal wali murid** di form *Data siswa*.
 11. **Alur akhir semester**: *Semester & Sertifikat* → **Tutup** periode input → periksa ringkasan → **Terbitkan sertifikat** (per kelas atau semua) → siswa mencetak lewat *Sertifikat Saya*. Kode sertifikat dapat diverifikasi publik tanpa login.
 
@@ -224,7 +224,7 @@ Pesan **tidak dikirim saat scan**; scan memasukkan baris ke `notifikasi_wa` deng
 - [x] QR dibuat dan dipindai tanpa CDN, tersedia offline lewat service worker — `public/js/qr*.js`
 - [x] Mode **catat banyak siswa sekaligus untuk satu kejadian** (§10) dengan cap harian per siswa dan transaksi all-or-nothing — `pages/guru/catat_banyak.php`
 - [x] Dashboard siswa memuat **grafik perkembangan mingguan** SVG inline 8 minggu (§10), hanya angka agregat tanpa nama pencatat
-- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan + **46/46** uji tiga pembaruan = **202/202** lulus pada preview PHP 8.3 + MySQL 5.7
+- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan + **55/55** uji pembaruan (termasuk sliding 30 hari) = **211/211** lulus pada preview PHP 8.3 + MySQL 5.7
 
 ---
 
@@ -300,7 +300,7 @@ Semua URL PWA relatif terhadap lokasi aplikasi: manifest memakai `scope: "./"`, 
 | Pendampingan BK | **BK → Tindak Lanjut**: pilih siswa, isi pemicu/tindakan/status; centang poin positif bila ada kegiatan perbaikan |
 | Wali murid | Buat akun peran **Wali murid** di *Pengguna*, tautkan di *Data siswa*. Portal hanya menampilkan ringkasan anaknya |
 
-**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **63 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **202 pemeriksaan fungsional lulus (126 + 13 + 17 + 46)**.
+**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **63 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **211 pemeriksaan fungsional lulus (126 + 13 + 17 + 55)**.
 
 ---
 
@@ -342,13 +342,15 @@ Sebelumnya `guru_kelas` dan `kelas.wali_kelas_id` membatasi daftar siswa. Sekara
 
 Implementasi: `daftar_siswa_untuk_guru()` dan `guru_boleh_siswa()` di `app/helpers.php` memakai `id_kelas_semua()`; semua halaman `pages/guru/*`, `api/scan.php`, `api/cari_siswa.php`, `pages/umum/{rekap,siswa,rekap_kehadiran}.php`, dan `pages/admin/kelas.php` mengikuti helper itu. **Yang tidak berubah:** `auth_wajib()` / pemeriksaan peran, token CSRF, serta pembatasan siswa dan wali murid hanya pada data anaknya.
 
-### 15.2 Cukup login sekali (30 hari)
+### 15.2 Cukup login sekali — 30 hari sejak aktivitas terakhir
 
-- Login **otomatis** menyimpan cookie sesi `SIDIPASES` dan cookie `SIDIPAINGAT` selama **30 hari** di memori HP/PC. Tidak perlu mencentang apa pun.
-- Bila sesi PHP hilang (browser ditutup, server restart), `auth_pengguna()` memulihkan login dari `SIDIPAINGAT` tanpa menampilkan halaman login.
+- Login **otomatis** menyimpan cookie sesi `SIDIPASES` dan cookie `SIDIPAINGAT` di memori HP/PC. Tidak perlu mencentang apa pun.
+- **Batasnya bergulir (sliding / idle timeout), bukan 30 hari absolut sejak login pertama.** Setiap kali pengguna membuka halaman SiDiPa dalam keadaan sudah masuk, `auth_ingat_perpanjang()` menulis ulang `Max-Age` kedua cookie menjadi 30 hari penuh dan menggeser `ingat_login.kedaluwarsa` ke `NOW() + 30 hari`. Penulisan DB dibatasi paling sering sekali sehari agar tidak ada `UPDATE` pada setiap request.
+- Akibatnya pengguna **hanya diminta login lagi bila benar-benar tidak membuka aplikasi selama 30 hari berturut-turut**. Pemakaian setiap hari tidak pernah memicu login ulang. Token yang sudah lewat batas sengaja **tidak** dihidupkan kembali.
+- Bila sesi PHP hilang (browser ditutup, server restart), `auth_pengguna()` memulihkan login dari `SIDIPAINGAT` tanpa menampilkan halaman login, dan token langsung diputar dengan batas 30 hari yang baru.
 - Form login menyediakan **Jangan simpan login di perangkat ini** (`jangan_ingat`) untuk komputer bersama; pilihannya disimpan di sesi sehingga request berikutnya tidak mengubah cookie menjadi persisten.
 - **Logout** menghapus kedua cookie dan mencabut token. **Ganti kata sandi** mencabut semua perangkat lain, lalu memberi token baru hanya pada perangkat yang sedang dipakai.
-- Durasi dapat diubah lewat `SIDIPA_INGAT_HARI` di `config.php` / environment (`SIDIPA_INGAT_HARI=7`).
+- Durasi dapat diubah lewat `SIDIPA_INGAT_HARI` di `config.php` / environment (`SIDIPA_INGAT_HARI=7`); perilaku bergulirnya otomatis mengikuti nilai tersebut.
 - Cookie `SIDIPAINGAT` bertanda `HttpOnly`, `SameSite` mengikuti `SIDIPA_SAMESITE`, `Secure` + `Partitioned` saat HTTPS/iframe (lihat bagian 14).
 
 **Migrasi untuk instalasi yang sudah berjalan.** Impor ulang `database.sql` aman (semua `CREATE TABLE IF NOT EXISTS`), atau jalankan SQL berikut sekali di phpMyAdmin:
@@ -380,3 +382,18 @@ CREATE TABLE IF NOT EXISTS ingat_login (
 | `pages/umum/laporan.php` | **Unduh XLSX (skor + ringkasan)** | `Skor per Siswa`, `Ringkasan per Kelas`, `Keterangan` |
 
 Log aktivitas memakai `ekspor_xlsx_kehadiran` / `ekspor_xlsx_laporan`. Berkas diuji dengan `openpyxl`: ZIP valid, nama lembar sesuai, 20 baris siswa, dan kolom angka terbaca sebagai angka. **Impor data master siswa tetap CSV** (`contoh/siswa_contoh.csv`, menu *Impor CSV*) karena itu berkas masukan, bukan laporan.
+
+
+### 15.4 Berkas & database untuk pembaruan "30 hari bergulir"
+
+| Yang diganti | Wajib? | Isi perubahan |
+| --- | --- | --- |
+| `app/auth.php` | **WAJIB** | Fungsi baru `auth_ingat_perpanjang()`; dipanggil dari `auth_pengguna()` hanya saat sesi masih ada; penanda `$_SESSION['waktu_aktif']` di `auth_mulai()` agar berkas sesi ikut tersegar |
+| `pages/login.php` | Disarankan | Teks bantuan form diubah menjelaskan bahwa batas diperpanjang tiap kali aplikasi dibuka |
+| `database.sql` | Tidak | Hanya **komentar** bagian 22 yang diperjelas. Tidak ada perubahan struktur |
+| `config.php` | Tidak | `SIDIPA_INGAT_HARI` sudah ada sejak pembaruan sebelumnya; nilainya otomatis dipakai sebagai lama idle. Ubah hanya bila ingin durasi selain 30 hari |
+| `README.md` | Tidak | Dokumentasi bagian 15.2 dan tabel ini |
+
+**Database: TIDAK ADA MIGRASI / `ALTER TABLE`.** Kolom `ingat_login.kedaluwarsa` yang sudah ada kini dipakai sebagai penanda "aktivitas terakhir + 30 hari"; nilainya digeser, bukan ditambah kolom baru. Cukup unggah `app/auth.php` (dan `pages/login.php` bila ingin teks bantuan ikut berubah).
+
+> Catatan: bila server Anda **belum** punya tabel `ingat_login` (belum menerapkan pembaruan login persisten sebelumnya), jalankan dulu `CREATE TABLE` pada bagian 15.2. `install.php` akan menandainya sebagai belum tersedia.

@@ -79,7 +79,7 @@ $didalamFrame = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '')) ===
           <input type="checkbox" name="jangan_ingat" value="1" style="width:20px;height:20px;min-height:0;margin-top:2px">
           <span>Jangan simpan login di perangkat ini</span>
         </label>
-        <p class="bantuan">Login tersimpan otomatis selama <?= (int) SIDIPA_INGAT_HARI ?> hari di HP/PC ini, jadi cukup masuk sekali. Centang kotak di atas bila memakai perangkat bersama.</p>
+        <p class="bantuan">Login tersimpan otomatis di HP/PC ini dan batas <?= (int) SIDIPA_INGAT_HARI ?> hari <strong>diperpanjang setiap kali Anda membuka SiDiPa</strong>. Anda cukup masuk sekali; login baru diminta lagi bila tidak membuka aplikasi selama <?= (int) SIDIPA_INGAT_HARI ?> hari berturut-turut. Centang kotak di atas bila memakai perangkat bersama.</p>
       </div>
       <div class="form-aksi">
         <button class="tombol tombol-utama tombol-penuh" type="submit">Masuk <?= ikon('masuk', 20) ?></button>

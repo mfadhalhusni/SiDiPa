@@ -509,9 +509,13 @@ INSERT IGNORE INTO pengaturan (kunci, nilai, grup) VALUES
 
 
 -- --------------------------------------------------------------------------
--- 22. Login persisten ("ingat saya")
+-- 22. Login persisten ("ingat saya") — SLIDING 30 HARI
 -- Hanya hash SHA-256 token yang disimpan; token mentah ada di cookie perangkat.
 -- Token diputar setiap kali dipakai, jadi token lama langsung tidak berlaku.
+-- `kedaluwarsa` BUKAN batas absolut sejak login: setiap aktivitas yang masih
+-- dalam masa berlaku menggesernya ke (NOW() + SIDIPA_INGAT_HARI). Pengguna
+-- hanya perlu login ulang bila tidak ada aktivitas selama masa itu.
+-- Tidak ada kolom/tabel tambahan untuk perilaku ini.
 -- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ingat_login (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

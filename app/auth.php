@@ -134,6 +134,10 @@ function auth_mulai(): void
     ini_set('session.use_strict_mode', '1');
     ini_set('session.gc_maxlifetime', (string) max(7200, auth_ingat_detik()));
     session_start();
+    // Ubah isi sesi pada setiap request agar berkas sesi tersegar walaupun
+    // session.lazy_write aktif; tanpa ini GC dapat membuang sesi yang masih
+    // dipakai, sehingga batas 30 hari tidak benar-benar bergulir.
+    $_SESSION['waktu_aktif'] = time();
     auth_pasang_cookie();
 }
 
@@ -145,11 +149,13 @@ function auth_ingat_simpan(int $penggunaId, ?string $tokenLama = null): void
             db_jalankan('DELETE FROM ingat_login WHERE token_hash = ?', [hash('sha256', $tokenLama)]);
         }
         $token = bin2hex(random_bytes(32));
-        db_sisip('ingat_login', [
-            'pengguna_id' => $penggunaId,
-            'token_hash' => hash('sha256', $token),
-            'kedaluwarsa' => date('Y-m-d H:i:s', time() + auth_ingat_detik()),
-        ]);
+        // Waktu dihitung MySQL (bukan date() PHP) agar tidak bergantung pada
+        // selisih zona waktu PHP vs koneksi database.
+        db_jalankan(
+            'INSERT INTO ingat_login (pengguna_id, token_hash, kedaluwarsa)
+             VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND))',
+            [$penggunaId, hash('sha256', $token), auth_ingat_detik()]
+        );
         // Bersihkan token kedaluwarsa sesekali agar tabel tidak menumpuk.
         if (random_int(1, 20) === 1) {
             db_jalankan('DELETE FROM ingat_login WHERE kedaluwarsa < NOW()', []);
@@ -243,6 +249,65 @@ function auth_ingat_pulih(): ?int
     }
 }
 
+/**
+ * SLIDING / IDLE TIMEOUT — geser batas "ingat saya" mengikuti aktivitas
+ * terakhir. Setiap halaman yang dibuka saat pengguna sudah masuk menulis
+ * ulang Max-Age cookie dan (paling sering sekali sehari) kedaluwarsa di DB.
+ * Pengguna hanya diminta login lagi bila benar-benar tidak membuka aplikasi
+ * selama SIDIPA_INGAT_HARI hari berturut-turut.
+ *
+ * Tidak menghidupkan kembali token yang sudah kedaluwarsa, dan tidak berlaku
+ * bila pengguna memilih "Jangan simpan login di perangkat ini".
+ */
+function auth_ingat_perpanjang(): void
+{
+    if (!auth_ingat_aktif() || headers_sent()) {
+        return;
+    }
+    $token = (string) ($_COOKIE[AUTH_COOKIE_INGAT] ?? '');
+    if (preg_match('/^[a-f0-9]{64}$/', $token) !== 1) {
+        return;
+    }
+    $id = (int) ($_SESSION['pengguna_id'] ?? 0);
+    if ($id <= 0) {
+        return;
+    }
+    $hash = hash('sha256', $token);
+    $detik = auth_ingat_detik();
+    try {
+        // Token yang sudah lewat batas TIDAK boleh diperpanjang.
+        $hidup = (int) db_nilai(
+            'SELECT COUNT(*) FROM ingat_login
+             WHERE token_hash = ? AND pengguna_id = ? AND kedaluwarsa > NOW()',
+            [$hash, $id],
+            0
+        );
+        if ($hidup === 0) {
+            auth_ingat_hapus();
+            return;
+        }
+        // Batasi penulisan DB: cukup sekali per jeda (1 hari untuk 30 hari).
+        $jeda = max(3600, min(86400, intdiv($detik, 30)));
+        db_jalankan(
+            'UPDATE ingat_login SET kedaluwarsa = DATE_ADD(NOW(), INTERVAL ? SECOND)
+             WHERE token_hash = ? AND pengguna_id = ?
+               AND kedaluwarsa < DATE_ADD(NOW(), INTERVAL ? SECOND)',
+            [$detik, $hash, $id, $detik - $jeda]
+        );
+    } catch (Throwable $galat) {
+        catat_kesalahan('auth_ingat_perpanjang gagal: ' . $galat->getMessage());
+        return;
+    }
+    // Header murah: cookie browser ikut bergeser pada setiap request.
+    $partisi = auth_partisi();
+    if ($partisi) {
+        header('Set-Cookie: ' . auth_header_hapus_lama(AUTH_COOKIE_INGAT), false);
+    }
+    header('Set-Cookie: ' . auth_header_cookie(
+        AUTH_COOKIE_INGAT, $token, $detik, $partisi
+    ), false);
+}
+
 function auth_pengguna(): ?array
 {
     static $pengguna = null;
@@ -252,9 +317,11 @@ function auth_pengguna(): ?array
     }
     $sudah = true;
     $id = $_SESSION['pengguna_id'] ?? null;
+    $dariSesi = $id !== null;
     if ($id === null) {
         // Sesi hilang (browser ditutup, server restart, dsb.) -> pulihkan
         // otomatis dari cookie "ingat saya" tanpa perlu login ulang.
+        // Pemulihan sudah memberi token + batas 30 hari yang benar-benar baru.
         $id = auth_ingat_pulih();
     }
     if ($id === null) {
@@ -272,6 +339,10 @@ function auth_pengguna(): ?array
     if ($pengguna === null || (int) $pengguna['aktif'] !== 1) {
         auth_keluar();
         return null;
+    }
+    if ($dariSesi) {
+        // Aktivitas terkonfirmasi -> hitung ulang 30 hari dari sekarang.
+        auth_ingat_perpanjang();
     }
     return $pengguna;
 }
