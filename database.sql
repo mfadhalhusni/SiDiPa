@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS siswa (
   nama VARCHAR(120) NOT NULL,
   jenis_kelamin ENUM('L','P') NOT NULL DEFAULT 'L',
   kelas_id INT UNSIGNED NOT NULL,
-  qr_token VARCHAR(64) NOT NULL,
+  qr_token VARCHAR(64) NOT NULL, -- kolom lama; QR kartu kini memuat pengguna.username (bagian 18)
   nama_wali VARCHAR(120) DEFAULT NULL,
   no_wa_wali VARCHAR(25) DEFAULT NULL,
   wali_pengguna_id INT UNSIGNED DEFAULT NULL,

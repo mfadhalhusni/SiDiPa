@@ -143,6 +143,49 @@ textarea { min-height: 96px; resize: vertical; }
   width: 22px; height: 22px; accent-color: var(--kuning); flex: 0 0 auto;
 }
 
+/* ---------- Saran otomatis pencarian siswa (halaman scan) ---------- */
+.pembungkus-saran { position: relative; }
+.pembungkus-saran > .input { position: relative; z-index: 2; }
+.saran-siswa {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  max-height: 236px;
+  overflow-y: auto;
+  background: var(--putih);
+  border: var(--tebal) solid var(--hitam);
+  border-radius: 0 0 10px 10px;
+  box-shadow: var(--bayang-kecil);
+  padding: 6px;
+}
+.saran-siswa[hidden] { display: none; }
+.saran-opsi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--abu);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--hitam);
+  cursor: pointer;
+}
+.saran-opsi:last-child { border-bottom: 0; }
+.saran-opsi span { font-size: .78rem; font-weight: 500; }
+.saran-opsi:hover, .saran-opsi:focus, .saran-opsi.saran-aktif {
+  background: var(--kuning);
+  outline: none;
+}
+.teks-sukses { color: #0b6b58; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .saran-opsi { transition: none; } }
+
 /* ---------- Pesan & status ----------------------------------------------- */
 .pesan {
   display: flex;

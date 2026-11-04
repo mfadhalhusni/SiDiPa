@@ -22,6 +22,9 @@
   /* Konfirmasi tindakan yang mengubah data. */
   document.addEventListener('submit', function (event) {
     var form = event.target;
+    /* Form AJAX (mis. pemindaian QR) mengelola tombolnya sendiri agar bisa
+       dipakai berulang tanpa jeda 8 detik. */
+    if (form.dataset && form.dataset.lewatiMuat === '1') { return; }
     var pengirim = event.submitter || null;
     var teksKonfirmasi = form.dataset.konfirmasi || (pengirim ? pengirim.dataset.konfirmasi : '');
     if (teksKonfirmasi && !window.confirm(teksKonfirmasi)) {

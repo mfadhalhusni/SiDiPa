@@ -219,6 +219,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                             'nama' => $r['nama'],
                             'jenis_kelamin' => $r['jenis_kelamin'],
                             'kelas_id' => $kelasId,
+                            /* qr_token hanya untuk memenuhi kolom lama; QR kartu memuat username. */
                             'qr_token' => acak_token(32),
                             'nama_wali' => $r['nama_wali'] !== '' ? $r['nama_wali'] : null,
                             'no_wa_wali' => $r['no_wa_wali'] !== '' ? $r['no_wa_wali'] : null,

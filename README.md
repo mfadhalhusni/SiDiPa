@@ -2,7 +2,7 @@
 
 Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan sertifikat digital untuk satu SMK. Dibuat untuk **shared hosting cPanel**: PHP 8.1+ tanpa framework, MySQL/MariaDB lewat PDO, HTML/CSS/JavaScript vanilla tanpa build step, tanpa Composer. Seluruh antarmuka berbahasa Indonesia dan bergaya **neo brutalism** buatan sendiri.
 
-> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16), serta **skala predikat 8 tingkat + username siswa untuk login** (bagian 17). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
+> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16), serta **skala predikat 8 tingkat + username siswa untuk login** (bagian 17), dan **QR kartu berisi username + saran otomatis + bunyi bip pada scan** (bagian 18). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
 
 ---
 
@@ -28,7 +28,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | **Tautan kartu lain** | `pages/guru/scan.php` + `api/scan.php` (QR berkelanjutan, fallback NIS, waktu server, jendela ibadah, tolak duplikat), `pages/guru/pembinaan.php`, `pages/guru/izin.php`, `pages/guru/penilaian.php`, `pages/guru/banding.php`, `pages/siswa/banding.php` |
 | **Catat banyak siswa (§10)** | `pages/guru/catat_banyak.php`: satu kejadian + satu tanggal + satu deskripsi untuk banyak siswa sekaligus, dalam **satu transaksi**. Bila satu siswa melampaui cap harian, seluruh batch dibatalkan |
 | **Grafik mingguan siswa (§10)** | `grafik_mingguan_siswa()` di `app/laporan.php` + SVG inline pada `pages/siswa/beranda.php`: akumulasi poin 8 minggu terakhir, tanpa pustaka grafik eksternal |
-| **Tahap 3 — Kartu QR** | `pages/admin/kartu.php` dan `pages/siswa/kartu.php`: kartu **85,6 × 54 mm** memuat nama, NIS, **username login**, kelas, dan QR berisi `qr_token` (bukan NIS). Cetak per kelas atau per siswa lewat `window.print()`. Token dapat dibuat ulang di Data siswa |
+| **Tahap 3 — Kartu QR** | `pages/admin/kartu.php` dan `pages/siswa/kartu.php`: kartu **85,6 × 54 mm** memuat nama, NIS, **username login**, kelas, dan QR berisi **username siswa** (bukan NIS, bukan lagi `qr_token`). Cetak per kelas atau per siswa lewat `window.print()`; kartu lama wajib dicetak ulang (bagian 18) |
 | **Tahap 3 — Hari libur** | `pages/admin/hari_libur.php`: tambah satu tanggal atau rentang (maks. 93 hari), ubah keterangan, hapus. `cron/harian.php`, `cron/mingguan.php`, dan `api/scan.php` melewati tanggal ini |
 | **Tahap 3 — Rekap kehadiran** | `app/laporan.php` + `pages/umum/rekap_kehadiran.php`: harian, bulanan, dan semester per siswa **dan** per kelas (hadir, hadir awal, terlambat, izin, sakit, alpa, % kehadiran) dengan **unduh XLSX** 3 lembar (Rekap Siswa, Ringkasan Kelas, Keterangan). Hak akses di server: siswa/wali hanya anaknya, guru menjangkau seluruh siswa aktif |
 | **Tahap 4 — Semester** | `pages/admin/sertifikat.php`: tambah semester, aktifkan (skor kembali 0), **tutup periode input**, buka kembali. `cek_input_semester()` membekukan catat poin, scan, izin, dan penilaian bulanan saat periode tertutup |
@@ -213,7 +213,7 @@ Pesan **tidak dikirim saat scan**; scan memasukkan baris ke `notifikasi_wa` deng
 - [x] PWA terpasang di semua halaman; halaman PHP/API tidak pernah di-cache — `sw.js`, `pwa_meta()`
 - [x] Layout 360–430 px, CSRF, dan prepared statements di seluruh halaman yang ada
 - [x] Cookie sesi `Path` selalu berupa path (bug URL penuh diperbaiki), `SameSite`/`Partitioned` dapat dikonfigurasi untuk preview lintas-situs, login pulih otomatis saat token CSRF kedaluwarsa (**bagian 14**), dan **login persisten 30 hari** dengan rotasi token (**bagian 15**)
-- [x] Kartu siswa 85,6 × 54 mm berisi `qr_token`, cetak per kelas dan per siswa — `pages/admin/kartu.php`, `pages/siswa/kartu.php`
+- [x] Kartu siswa 85,6 × 54 mm berisi **username siswa** pada QR, cetak per kelas dan per siswa — `pages/admin/kartu.php`, `pages/siswa/kartu.php`
 - [x] Hari libur dikelola admin dan dilewati cron/scan — `pages/admin/hari_libur.php`
 - [x] Rekap kehadiran harian/bulanan/semester per siswa dan per kelas + unduh XLSX — `app/laporan.php`, `app/xlsx.php`
 - [x] Admin menutup periode input; catat poin, scan, izin, dan penilaian bulanan dibekukan — `cek_input_semester()`
@@ -224,7 +224,7 @@ Pesan **tidak dikirim saat scan**; scan memasukkan baris ke `notifikasi_wa` deng
 - [x] QR dibuat dan dipindai tanpa CDN, tersedia offline lewat service worker — `public/js/qr*.js`
 - [x] Mode **catat banyak siswa sekaligus untuk satu kejadian** (§10) dengan cap harian per siswa dan transaksi all-or-nothing — `pages/guru/catat_banyak.php`
 - [x] Dashboard siswa memuat **grafik perkembangan mingguan** SVG inline 8 minggu (§10), hanya angka agregat tanpa nama pencatat
-- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan + **55/55** uji pembaruan (termasuk sliding 30 hari) + **35/35** uji fitur siswa + **51/51** uji predikat & username = **297/297** lulus pada preview PHP 8.3 + MySQL 5.7
+- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan + **55/55** uji pembaruan (termasuk sliding 30 hari) + **35/35** uji fitur siswa + **51/51** uji predikat & username + **55/55** uji scan/QR/saran = **352/352** lulus pada preview PHP 8.3 + MySQL 5.7
 
 ---
 
@@ -300,7 +300,7 @@ Semua URL PWA relatif terhadap lokasi aplikasi: manifest memakai `scope: "./"`, 
 | Pendampingan BK | **BK → Tindak Lanjut**: pilih siswa, isi pemicu/tindakan/status; centang poin positif bila ada kegiatan perbaikan |
 | Wali murid | Buat akun peran **Wali murid** di *Pengguna*, tautkan di *Data siswa*. Portal hanya menampilkan ringkasan anaknya |
 
-**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **63 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **297 pemeriksaan fungsional lulus (126 + 13 + 17 + 55 + 35 + 51)**, termasuk uji degradasi saat kolom `foto` belum ada dan uji 8 batas predikat.
+**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **63 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **352 pemeriksaan fungsional lulus (126 + 13 + 17 + 55 + 35 + 51 + 55)**, termasuk uji degradasi saat kolom `foto` belum ada, uji 8 batas predikat, dan uji QR username/saran otomatis/bunyi.
 
 ---
 
@@ -489,7 +489,7 @@ Sebelumnya `pengguna.username` untuk akun siswa **diisi otomatis dengan NIS**, b
 - **Impor CSV** → kolom opsional `username` (alias: `nama_pengguna`, `username_siswa`, `user`, `login`). Kosong = dibuat otomatis dari nama; pratinjau menampilkan username final dan menolak username ganda / hanya angka.
 - **Pengguna** → validasi yang sama untuk akun berperan `siswa`, supaya tidak ada jalan kembali ke username berupa NIS.
 - **Halaman login** → label **Username**, petunjuk "Siswa masuk dengan username siswa, bukan NIS/NISN", dan pesan khusus bila yang diketik masih angka: *"NIS/NISN tidak dipakai untuk login lagi…"*. Kata sandi, kebijakan 30 hari bergulir, CSRF, throttle, dan wajib ganti sandi **tidak berubah**.
-- **Kartu QR** (`pages/admin/kartu.php` dan `pages/siswa/kartu.php`) kini mencetak baris **Login** berisi username siswa, di samping NIS dan kelas. QR tetap berisi `qr_token`, dan kode sertifikat tetap memakai NIS.
+- **Kartu QR** (`pages/admin/kartu.php` dan `pages/siswa/kartu.php`) kini mencetak baris **Login** berisi username siswa, di samping NIS dan kelas. **Isi QR kemudian diganti menjadi username siswa pada bagian 18**; kode sertifikat tetap memakai NIS.
 - **Data contoh**: 20 akun siswa memakai username dari nama, mis. `20260100` → `ahmad.rizky`, `20260113` → `alya.putri2`. Daftar lengkap ada di `contoh/migrasi_username_siswa.sql` dan `contoh/README.md`.
 
 **Migrasi massal untuk instalasi lama:** buka **Admin → Data siswa → Buatkan username massal**. Tombol ini mencari seluruh akun siswa yang `username`-nya masih angka, membuat username dari nama (unik terhadap semua akun), dan menampilkan tabel **NIS → username baru** yang bisa dicetak/dibagikan. Aman dijalankan berulang; username yang sudah berhuruf tidak diubah, dan **kata sandi tetap**. Untuk paket data contoh bisa juga mengimpor `contoh/migrasi_username_siswa.sql`. Setelah migrasi, NIS tidak lagi bisa dipakai masuk. `install.php` menandai bila masih ada akun siswa ber-username angka.
@@ -531,4 +531,72 @@ UPDATE pengaturan SET nilai = '0'  WHERE kunci = 'predikat_d';
 
 ### 17.4 Uji coba
 
-Suite baru `.preview/tmpjs/uji_predikat_username.py` (**51/51**) memeriksa 8 batas predikat lewat beranda siswa (termasuk nilai > 100 %, 59 %, dan minus), ketiadaan predikat E, **8 ambang** di Pengaturan, legenda skala, login username vs penolakan NIS, field/tabel username di Data siswa, tombol migrasi massal, impor CSV dengan & tanpa kolom `username`, serta baris **Login** pada kartu QR. Regresi lengkap setelah pembaruan ini: **297/297** (126 + 13 + 17 + 55 + 35 + 51) pada preview PHP 8.3.33 + MySQL 5.7.29, dengan 63 berkas PHP tanpa galat parsing.
+Suite baru `.preview/tmpjs/uji_predikat_username.py` (**51/51**) memeriksa 8 batas predikat lewat beranda siswa (termasuk nilai > 100 %, 59 %, dan minus), ketiadaan predikat E, **8 ambang** di Pengaturan, legenda skala, login username vs penolakan NIS, field/tabel username di Data siswa, tombol migrasi massal, impor CSV dengan & tanpa kolom `username`, serta baris **Login** pada kartu QR. Regresi lengkap: **352/352** (126 + 13 + 17 + 55 + 35 + 51 + 55) pada preview PHP 8.3.33 + MySQL 5.7.29, dengan 63 berkas PHP tanpa galat parsing.
+
+---
+
+## 18. Pembaruan: scan QR, bunyi bip, saran siswa, dan QR berisi username
+
+### 18.1 Jawaban: apakah scan QR langsung tercatat?
+
+**Ya, langsung tercatat — tidak perlu menekan tombol "Catat Scan Masuk".** Alurnya:
+
+```
+Kamera membaca QR → callback Html5Qrcode → POST api/scan.php
+  → tulis kehadiran (masuk/pulang) atau kehadiran_ibadah (Dhuha/Dhuhur)
+  → kartu hasil + bunyi → tabel 10 scan terakhir dimuat ulang ~2,2 detik
+```
+
+Yang perlu disiapkan sebelum siswa mengantre: **pilih mode** lewat empat tombol di atas halaman (Scan Masuk / Scan Pulang / Sholat Dhuha / Sholat Dhuhur — pilihan disimpan di `$_SESSION['scan_mode_terakhir']`) dan **klik "Aktifkan kamera"** sekali. Tombol **"Catat …"** hanya dipakai untuk **fallback input manual** bila kamera/HTTPS tidak tersedia. Perlindungan yang tetap berlaku: kunci 800 ms di sisi browser, penolakan duplikat hari + jenis di server, jendela waktu ibadah, hari libur, izin/sakit/udzur, dan `cek_input_semester()`.
+
+### 18.2 Bunyi bip saat siswa scan
+
+Bunyi **sudah ada** sebelumnya (satu nada 880 Hz pada hasil sukses), tetapi sering tidak terdengar karena setiap scan membuat `AudioContext` baru tanpa pernah menutupnya — browser membatasi jumlah konteks audio. Sekarang:
+
+- **Satu `AudioContext` dipakai ulang** untuk seluruh sesi halaman, dibuka/dilanjutkan (`resume()`) pada interaksi pertama pengguna agar lolos kebijakan autoplay.
+- **Berhasil**: dua nada 880 Hz → 1175 Hz. **Gagal / duplikat / siswa tidak ditemukan**: nada rendah 220 Hz. Getar (`navigator.vibrate`) tetap dipertahankan.
+- Sakelar **Bunyi bip** dan tombol **Coba bunyi** tersedia di kartu pemindai; pilihan disimpan di `localStorage` per perangkat (bawaan: aktif).
+- Bunyi juga berlaku untuk hasil input manual, bukan hanya kamera.
+
+### 18.3 Satu input manual: NIS atau nama + saran otomatis
+
+Input NIS manual diganti menjadi **"NIS atau nama siswa"** dengan saran otomatis:
+
+- Mengetik ≥ 2 karakter memanggil `api/cari_siswa.php?q=…` (debounce 180 ms, permintaan lama diabaikan). Endpoint ini kini **diizinkan untuk peran `guru`** (sebelumnya 403) dan mencocokkan `siswa.nama` **atau** `siswa.nis`; sesuai keputusan, username **tidak** ikut dicari di kolom ini.
+- Saran menampilkan **nama + NIS + kelas**, bisa dipilih dengan mouse, `↑`/`↓`, `Enter`, atau `Esc`. Memilih saran mengisi hidden field berisi **NIS pasti**, sehingga yang dikirim ke `api/scan.php` selalu identik dengan data siswa.
+- Menekan **Enter tanpa memilih** tetap bekerja: bila pencarian menghasilkan tepat satu siswa, langsung dicatat; bila beberapa, daftar saran dibuka dan muncul pesan "Beberapa siswa cocok"; bila nol, muncul "Siswa tidak ditemukan". Tidak ada lagi tebakan nama yang ambigu.
+- Aksesibilitas: `role="combobox"`, `aria-autocomplete="list"`, `aria-expanded`, `role="listbox"`/`option`, dan target sentuh ≥ 44 px.
+
+### 18.4 QR kartu sekarang berisi username siswa
+
+Sebelumnya QR memuat `siswa.qr_token` (32 karakter acak) — **bukan NIS**, sesuai aturan awal PDF. Sesuai permintaan, isi QR **diganti menjadi `pengguna.username` siswa**:
+
+| Berkas | Perubahan |
+| --- | --- |
+| `pages/admin/kartu.php` | `data-qr` dari `qr_token` → `username`; petunjuk cetak ulang kartu |
+| `pages/siswa/kartu.php` | `data-qr` dari `qr_token` → username siswa (bukan username wali yang membuka kartu) |
+| `api/scan.php` | `token` dicocokkan ke `p.username` lewat `JOIN pengguna`; respons ikut mengirim `username` |
+| `api/cari_siswa.php` | parameter `token` kini mencocokkan `p.username`, bukan `qr_token` |
+| `pages/admin/siswa.php` | aksi/tombol **Reset QR dihapus** (token acak tidak lagi dipakai) |
+
+**Bersifat ketat (sesuai pilihan):** kartu lama **tidak bisa dipindai lagi**. Bila `api/scan.php` menerima token yang ternyata `qr_token` lama, balasannya menjelaskan: *"Kartu QR lama sudah tidak berlaku. Cetak ulang kartu siswa; QR sekarang memuat username siswa."* Jadi **cetak ulang seluruh kartu** lewat Admin → Cetak Kartu setelah menerapkan pembaruan ini. Kolom `siswa.qr_token` sengaja **tidak dihapus** (masih `NOT NULL`, diisi nilai acak saat siswa dibuat) agar instalasi lama tidak perlu `ALTER TABLE`; kolom itu kini hanya data warisan yang tidak dipakai untuk pemindaian.
+
+> Catatan privasi: username siswa memang sudah tercetak di baris **Login** kartu sejak bagian 17, sehingga memindahkannya ke QR tidak menambah data baru ke kartu. Kode sertifikat, NIS pada kartu, dan QR verifikasi sertifikat tetap tidak berubah.
+
+### 18.5 Berkas & database yang perlu diganti
+
+| Berkas | Wajib? | Isi perubahan |
+| --- | --- | --- |
+| `api/scan.php` | **WAJIB** | resolusi QR by username, pesan kartu lama, JOIN `pengguna` |
+| `api/cari_siswa.php` | **WAJIB** | izinkan `guru`, resolusi `token` by username, JOIN `pengguna` |
+| `pages/guru/scan.php` | **WAJIB** | saran otomatis, bunyi bip 2 nada + sakelar, penjelasan alur scan |
+| `pages/admin/kartu.php`, `pages/siswa/kartu.php` | **WAJIB** | QR berisi username |
+| `pages/admin/siswa.php` | **WAJIB** | hapus Reset QR, perbarui teks migrasi |
+| `public/css/sidipa.css`, `public/js/sidipa.js` | Disarankan | gaya dropdown saran; `data-lewati-muat` agar form AJAX tidak menonaktifkan tombol 8 detik |
+| `pages/admin/impor_siswa.php`, `database.sql`, `README.md` | Disarankan | komentar kolom warisan & dokumentasi |
+
+**Database: TIDAK ADA MIGRASI / `ALTER TABLE`.** Tidak ada tabel, kolom, atau baris `pengaturan` baru. Cukup unggah berkas di atas lalu **cetak ulang kartu siswa**.
+
+### 18.6 Uji coba
+
+Suite baru `.preview/tmpjs/uji_scan_qr.py` (**55/55**) memeriksa: QR kartu admin & siswa benar-benar memuat username (bukan token), `api/scan.php` menerima username dan menolak token lama, fallback NIS tetap jalan, `api/cari_siswa.php` dapat diakses guru dan mencocokkan NIS maupun nama (serta pembatasan privasi akun siswa), markup saran otomatis + atribut ARIA, sakelar/dua nada/`AudioContext` tunggal pada halaman scan, opt-out form AJAX, serta tidak adanya tombol Reset QR. Regresi keseluruhan **352/352**.

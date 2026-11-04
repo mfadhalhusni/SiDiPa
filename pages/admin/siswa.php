@@ -97,6 +97,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                         ]);
                         db_sisip('siswa', [
                             'pengguna_id' => $penggunaId,
+                            /* qr_token kolom lama, tetap diisi agar skema NOT NULL
+                               terpenuhi; QR kartu kini memuat p.username. */
                             'nis' => $nis,
                             'nama' => $nama,
                             'jenis_kelamin' => $jk,
@@ -169,12 +171,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $pesanGalat = $galat->getMessage();
         }
         alihkan('pages/admin/siswa.php');
-    } elseif ($aksi === 'reset_qr') {
-        $id = post_int('id');
-        db_jalankan('UPDATE siswa SET qr_token = ? WHERE id = ?', [acak_token(32), $id]);
-        log_akses('reset_qr_siswa', 'siswa', $id);
-        flash('Token QR kartu dibuat ulang. Cetak ulang kartu siswa.');
-        alihkan('pages/admin/siswa.php');
     } elseif ($aksi === 'reset_sandi') {
         $id = post_int('id');
         $siswa = db_satu('SELECT pengguna_id FROM siswa WHERE id = ?', [$id]);
@@ -217,7 +213,7 @@ if ($filterKelas > 0) {
     $param[] = $filterKelas;
 }
 $daftarSiswa = db_semua(
-    'SELECT s.id, s.nis, s.nama, s.jenis_kelamin, s.aktif, s.qr_token,
+    'SELECT s.id, s.nis, s.nama, s.jenis_kelamin, s.aktif,
             k.nama AS kelas, p.username
      FROM siswa s
      LEFT JOIN kelas k ON k.id = s.kelas_id
@@ -312,7 +308,7 @@ if (is_array($hasilUsername) && $hasilUsername !== []): ?>
 <section class="kartu form-kartu">
   <p class="label-kecil">Pembaruan akun siswa</p>
   <h2>Buatkan username untuk semua siswa</h2>
-  <p class="teks-kecil">Tombol ini mengganti username akun siswa yang masih berupa angka NIS dengan username dari nama. Username yang sudah berhuruf <strong>tidak diubah</strong>. Kata sandi tetap, dan NIS tetap dipakai untuk kartu QR serta kode sertifikat.</p>
+  <p class="teks-kecil">Tombol ini mengganti username akun siswa yang masih berupa angka NIS dengan username dari nama. Username yang sudah berhuruf <strong>tidak diubah</strong>. Kata sandi tetap. <strong>QR kartu kini memuat username siswa</strong> — setelah migrasi, cetak ulang semua kartu (lihat bagian 18 README). NIS tetap dipakai untuk kode sertifikat.</p>
   <form method="post" action="<?= e(url('pages/admin/siswa.php')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="aksi" value="buat_username">
@@ -350,7 +346,6 @@ if (is_array($hasilUsername) && $hasilUsername !== []): ?>
             <div class="baris-tombol">
               <a class="tombol tombol-kecil tombol-putih" href="<?= e(url('pages/admin/siswa.php?edit=' . (int) $s['id'])) ?>" aria-label="Ubah <?= e($s['nama']) ?>"><?= ikon('ubah', 18) ?></a>
               <a class="tombol tombol-kecil tombol-putih" href="<?= e(url('pages/admin/kartu.php?siswa=' . (int) $s['id'])) ?>" aria-label="Cetak kartu <?= e($s['nama']) ?>"><?= ikon('cetak', 18) ?></a>
-              <form method="post" style="display:inline"><?= csrf_field() ?><input type="hidden" name="aksi" value="reset_qr"><input type="hidden" name="id" value="<?= e($s['id']) ?>"><button class="tombol tombol-kecil" type="submit" data-konfirmasi="Buat ulang token QR kartu siswa ini? Kartu lama tidak akan berlaku." aria-label="Buat ulang QR">QR</button></form>
               <form method="post" style="display:inline"><?= csrf_field() ?><input type="hidden" name="aksi" value="reset_sandi"><input type="hidden" name="id" value="<?= e($s['id']) ?>"><button class="tombol tombol-kecil" type="submit" data-konfirmasi="Reset kata sandi siswa ini ke Siswa@2026?" aria-label="Reset kata sandi">Sandi</button></form>
               <form method="post" style="display:inline"><?= csrf_field() ?><input type="hidden" name="aksi" value="<?= (int) $s['aktif'] === 1 ? 'nonaktifkan' : 'aktifkan' ?>"><input type="hidden" name="id" value="<?= e($s['id']) ?>"><button class="tombol tombol-kecil tombol-putih" type="submit" aria-label="<?= (int) $s['aktif'] === 1 ? 'Nonaktifkan' : 'Aktifkan' ?> siswa"><?= ikon((int) $s['aktif'] === 1 ? 'silang' : 'centang', 18) ?></button></form>
             </div>

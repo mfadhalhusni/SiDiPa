@@ -2,7 +2,9 @@
 declare(strict_types=1);
 
 /*
- | Endpoint JSON pencarian siswa (nama, NIS, atau token QR kartu).
+ | Endpoint JSON untuk SARAN OTOMATIS pada input manual halaman scan.
+ | Satu kata kunci bisa berupa NIS maupun nama siswa. Parameter `token`
+ | (opsional) kini mencocokkan USERNAME SISWA, sesuai isi QR kartu terbaru.
  | KERAHASIAAN: hanya kolom id, nis, nama, kelas yang dikirim.
  | Tidak ada pencatat_id, qr_token, nomor WhatsApp, maupun data pribadi lain.
  */
@@ -35,12 +37,12 @@ if ($peran === 'siswa' || $peran === 'wali') {
     }
     $syarat[] = 's.id = ?';
     $param[] = (int) $sendiri['id'];
-} elseif (!in_array($peran, ['admin', 'bk', 'kepsek'], true)) {
+} elseif (!in_array($peran, ['admin', 'bk', 'kepsek', 'guru'], true)) {
     json_keluar(['ok' => false, 'pesan' => 'Peran tidak diizinkan.'], 403);
 }
 
 if ($token !== '') {
-    $syarat[] = 's.qr_token = ?';
+    $syarat[] = 'p.username = ?';
     $param[] = $token;
 } else {
     $syarat[] = '(s.nama LIKE ? OR s.nis LIKE ?)';
@@ -51,6 +53,7 @@ if ($token !== '') {
 $daftar = db_semua(
     'SELECT s.id, s.nis, s.nama, k.nama AS kelas
      FROM siswa s LEFT JOIN kelas k ON k.id = s.kelas_id
+     JOIN pengguna p ON p.id = s.pengguna_id
      WHERE ' . implode(' AND ', $syarat) . '
      ORDER BY s.nama LIMIT 20',
     $param

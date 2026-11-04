@@ -39,7 +39,7 @@ $terakhir = db_semua(
 halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav' => 'beranda']);
 ?>
 <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-  <span>Mode <strong><?= e($modeValid[$mode]) ?></strong> tersimpan sebagai pilihan terakhir. Kamera memerlukan HTTPS; bila tidak tersedia, pakai <strong>Input NIS manual</strong>.</span>
+  <span>Mode <strong><?= e($modeValid[$mode]) ?></strong> tersimpan sebagai pilihan terakhir. <strong>QR langsung tercatat tanpa klik tombol</strong> — cukup pilih mode lalu aktifkan kamera. QR kartu berisi username siswa; bila kamera tidak tersedia, pakai <strong>Cari NIS / nama siswa</strong>.</span>
 </div>
 
 <nav class="baris-tombol margin-bawah" aria-label="Pilih mode pemindaian">
@@ -52,7 +52,7 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
 <div class="kartu bg-toska margin-bawah" id="hasil-scan" aria-live="polite" role="status">
   <p class="label-kecil">Hasil pemindaian</p>
   <h2 id="hasil-judul" style="margin:0">Siap memindai</h2>
-  <p class="teks-kecil" id="hasil-rinci" style="margin:6px 0 0">Arahkan kamera ke kartu QR siswa atau ketik NIS di bawah.</p>
+  <p class="teks-kecil" id="hasil-rinci" style="margin:6px 0 0">Arahkan kamera ke kartu QR siswa atau cari NIS/nama di bawah.</p>
 </div>
 
 <div class="grid grid-2 margin-bawah">
@@ -63,18 +63,29 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
       <button class="tombol tombol-utama" type="button" id="mulai-kamera"><?= ikon('kamera', 20) ?> Aktifkan kamera</button>
       <button class="tombol tombol-putih" type="button" id="henti-kamera"><?= ikon('silang', 20) ?> Hentikan</button>
     </div>
+    <div class="baris-tombol margin-atas">
+      <label class="pilihan-baris" for="bunyi-aktif" style="font-size:.85rem">
+        <input type="checkbox" id="bunyi-aktif" checked> <span>Bunyi bip</span>
+      </label>
+      <button class="tombol tombol-putih tombol-kecil" type="button" id="coba-bunyi"><?= ikon('lonceng', 18) ?> Coba bunyi</button>
+    </div>
+    <p class="bantuan margin-atas">Bip dua nada saat berhasil, nada rendah saat gagal/duplikat. Pengaturan tersimpan di perangkat ini.</p>
     <?php if (!https_aktif()): ?>
       <div class="pesan pesan-galat margin-atas" role="alert"><?= ikon('peringatan', 20) ?><span>Kamera diblokir karena halaman tidak memakai HTTPS.</span></div>
     <?php endif; ?>
   </section>
 
   <section class="kartu">
-    <p class="label-kecil">Input NIS manual</p>
-    <form id="form-manual" autocomplete="off">
-      <div class="form-baris">
-        <label for="nis">NIS siswa</label>
-        <input class="input" id="nis" name="nis" inputmode="numeric" placeholder="Misal 20260100" required>
+    <p class="label-kecil">Cari siswa (manual)</p>
+    <form id="form-manual" autocomplete="off" data-lewati-muat="1">
+      <div class="form-baris pembungkus-saran">
+        <label for="cari-siswa">NIS atau nama siswa</label>
+        <input class="input" id="cari-siswa" name="cari" type="text" placeholder="Misal 20260100 atau Alya" autocomplete="off"
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="saran-siswa" aria-haspopup="listbox" required>
+        <input type="hidden" id="nis-terpilih" name="nis" value="">
+        <div class="saran-siswa" id="saran-siswa" role="listbox" aria-label="Saran siswa" hidden></div>
       </div>
+      <p class="bantuan" id="siswa-terpilih" style="margin-top:8px">Ketik NIS atau nama siswa, lalu pilih dari saran.</p>
       <div class="form-aksi"><button class="tombol tombol-utama" type="submit"><?= ikon('scan', 20) ?> Catat <?= e($modeValid[$mode]) ?></button></div>
     </form>
     <div class="garis-pemisah"></div>
@@ -111,6 +122,7 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
   'use strict';
   var MODE = <?= json_encode($mode, JSON_UNESCAPED_SLASHES) ?>;
   var ENDPOINT = <?= json_encode(url('api/scan.php'), JSON_UNESCAPED_SLASHES) ?>;
+  var ENDPOINT_CARI = <?= json_encode(url('api/cari_siswa.php'), JSON_UNESCAPED_SLASHES) ?>;
   var judul = document.getElementById('hasil-judul');
   var rinci = document.getElementById('hasil-rinci');
   var kotak = document.getElementById('hasil-scan');
@@ -118,19 +130,76 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
   var pemindai = null;
   var timerHasil = null;
 
-  function bunyi() {
+  /* ---------- Bunyi bip: SATU AudioContext dipakai ulang ----------
+     Kode lama membuat AudioContext baru tiap scan dan tidak menutupnya,
+     sehingga browser berhenti mengeluarkan suara setelah beberapa kali. */
+  var KUNCI_BUNYI = 'sidipa_bunyi_scan';
+  var audioCtx = null;
+  var sakelar = document.getElementById('bunyi-aktif');
+
+  function bunyiHidup() {
+    try { return window.localStorage.getItem(KUNCI_BUNYI) !== '0'; }
+    catch (_) { return true; }
+  }
+  function simpanBunyi(hidup) {
+    try { window.localStorage.setItem(KUNCI_BUNYI, hidup ? '1' : '0'); } catch (_) {}
+  }
+  function konteksAudio() {
+    if (audioCtx) { return audioCtx; }
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) { return null; }
+    try { audioCtx = new Ctx(); } catch (_) { return null; }
+    return audioCtx;
+  }
+  function bukaAudio() {
+    var ctx = konteksAudio();
+    if (ctx && ctx.state === 'suspended' && ctx.resume) {
+      try { ctx.resume().catch(function () {}); } catch (_) {}
+    }
+  }
+  /* Kebijakan autoplay: konteks dibuka pada interaksi pertama pengguna. */
+  document.addEventListener('pointerdown', bukaAudio, { once: true });
+  document.addEventListener('keydown', bukaAudio, { once: true });
+
+  function nada(frekuensi, jeda, durasi, volume) {
+    var ctx = konteksAudio();
+    if (!ctx) { return; }
+    bukaAudio();
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      var ctx = new Ctx();
+      var mulai = ctx.currentTime + jeda;
       var osc = ctx.createOscillator();
       var gain = ctx.createGain();
-      osc.type = 'sine'; osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.14, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(frekuensi, mulai);
+      gain.gain.setValueAtTime(0.0001, mulai);
+      gain.gain.exponentialRampToValueAtTime(volume, mulai + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, mulai + durasi);
       osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(); osc.stop(ctx.currentTime + 0.19);
+      osc.start(mulai); osc.stop(mulai + durasi + 0.02);
     } catch (_) { /* perangkat tanpa audio */ }
+  }
+  function bunyi(ok) {
+    if (!bunyiHidup()) { return; }
+    if (ok) {
+      nada(880, 0, 0.10, 0.16);        /* bip pertama */
+      nada(1175, 0.12, 0.14, 0.16);   /* bip kedua, lebih tinggi */
+    } else {
+      nada(220, 0, 0.22, 0.14);       /* nada rendah: gagal / duplikat */
+    }
+  }
+  if (sakelar) {
+    sakelar.checked = bunyiHidup();
+    sakelar.addEventListener('change', function () {
+      simpanBunyi(sakelar.checked);
+      if (sakelar.checked) { bukaAudio(); bunyi(true); }
+    });
+  }
+  var coba = document.getElementById('coba-bunyi');
+  if (coba) {
+    coba.addEventListener('click', function () {
+      bukaAudio();
+      if (!sakelar || sakelar.checked) { bunyi(true); }
+    });
   }
 
   function tampil(ok, teks, rincian) {
@@ -138,8 +207,8 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
     kotak.classList.add(ok ? 'bg-toska' : 'bg-koral');
     judul.textContent = teks;
     rinci.textContent = rincian;
-    if (navigator.vibrate) navigator.vibrate(ok ? [90, 40, 90] : [220]);
-    if (ok) bunyi();
+    if (navigator.vibrate) { navigator.vibrate(ok ? [90, 40, 90] : [220]); }
+    bunyi(ok);
     window.clearTimeout(timerHasil);
     timerHasil = window.setTimeout(function () {
       kotak.classList.remove('bg-toska');
@@ -149,7 +218,7 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
   }
 
   function kirim(data) {
-    if (sibuk) return;
+    if (sibuk) { return; }
     sibuk = true;
     data.mode = MODE;
     window.SiDiPa.post(ENDPOINT, data).then(function (res) {
@@ -159,9 +228,7 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
           (res.pesan || '') + ' | ' + (res.jam || '') + ' | ' + (s.kelas || '-')
           + (res.poin ? ' | ' + res.poin + ' poin' : ''));
         var tabel = document.querySelector('table.tabel tbody');
-        if (tabel) {
-          window.setTimeout(function () { window.location.reload(); }, 2200);
-        }
+        if (tabel) { window.setTimeout(function () { window.location.reload(); }, 2200); }
       } else {
         tampil(false, 'Gagal', (res && res.pesan) ? res.pesan : 'Tidak dapat memproses pemindaian.');
       }
@@ -172,26 +239,142 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
     });
   }
 
-  document.getElementById('form-manual').addEventListener('submit', function (e) {
+  /* ---------- Saran otomatis: satu input untuk NIS atau nama ---------- */
+  var inputCari = document.getElementById('cari-siswa');
+  var nisTerpilih = document.getElementById('nis-terpilih');
+  var kotakSaran = document.getElementById('saran-siswa');
+  var infoTerpilih = document.getElementById('siswa-terpilih');
+  var formManual = document.getElementById('form-manual');
+  var pilihan = [];
+  var indeksAktif = -1;
+  var timerCari = null;
+  var urutanCari = 0;
+
+  function tutupSaran() {
+    kotakSaran.hidden = true;
+    kotakSaran.innerHTML = '';
+    indeksAktif = -1;
+    inputCari.setAttribute('aria-expanded', 'false');
+  }
+  function sorot(i) {
+    var anak = kotakSaran.querySelectorAll('[role="option"]');
+    for (var j = 0; j < anak.length; j += 1) {
+      anak[j].classList.toggle('saran-aktif', j === i);
+      anak[j].setAttribute('aria-selected', j === i ? 'true' : 'false');
+    }
+    indeksAktif = i;
+    if (i >= 0 && anak[i]) { anak[i].scrollIntoView({ block: 'nearest' }); }
+  }
+  function renderSaran(daftar) {
+    pilihan = daftar || [];
+    kotakSaran.innerHTML = '';
+    indeksAktif = -1;
+    if (pilihan.length === 0) { tutupSaran(); return; }
+    for (var i = 0; i < pilihan.length; i += 1) {
+      var s = pilihan[i];
+      var opsi = document.createElement('button');
+      opsi.type = 'button';
+      opsi.className = 'saran-opsi';
+      opsi.setAttribute('role', 'option');
+      opsi.setAttribute('aria-selected', 'false');
+      opsi.dataset.indeks = String(i);
+      opsi.innerHTML = '<strong></strong><span></span>';
+      opsi.querySelector('strong').textContent = s.nama || 'Siswa';
+      opsi.querySelector('span').textContent = 'NIS ' + (s.nis || '-') + ' · ' + (s.kelas || '-');
+      kotakSaran.appendChild(opsi);
+    }
+    kotakSaran.hidden = false;
+    inputCari.setAttribute('aria-expanded', 'true');
+  }
+  function pilih(s) {
+    nisTerpilih.value = s.nis || '';
+    inputCari.value = s.nis || '';
+    infoTerpilih.textContent = 'Dipilih: ' + (s.nama || 'Siswa') + ' · NIS ' + (s.nis || '-') + ' · ' + (s.kelas || '-');
+    infoTerpilih.classList.add('teks-sukses');
+    tutupSaran();
+  }
+  function cariSiswa() {
+    var q = inputCari.value.trim();
+    if (q.length < 2) { tutupSaran(); return; }
+    var urutan = ++urutanCari;
+    window.SiDiPa.get(ENDPOINT_CARI, { q: q }).then(function (res) {
+      if (urutan !== urutanCari) { return; }
+      renderSaran((res && res.siswa) || []);
+    }).catch(function () { tutupSaran(); });
+  }
+  inputCari.addEventListener('input', function () {
+    nisTerpilih.value = '';
+    infoTerpilih.classList.remove('teks-sukses');
+    infoTerpilih.textContent = 'Ketik NIS atau nama siswa, lalu pilih dari saran.';
+    window.clearTimeout(timerCari);
+    timerCari = window.setTimeout(cariSiswa, 180);
+  });
+  kotakSaran.addEventListener('click', function (e) {
+    var opsi = e.target.closest ? e.target.closest('[role="option"]') : null;
+    if (!opsi) { return; }
+    var i = parseInt(opsi.dataset.indeks, 10);
+    if (pilihan[i]) { pilih(pilihan[i]); inputCari.focus(); }
+  });
+  inputCari.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { tutupSaran(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (kotakSaran.hidden || pilihan.length === 0) { return; }
+      e.preventDefault();
+      var berikut = e.key === 'ArrowDown'
+        ? (indeksAktif + 1) % pilihan.length
+        : (indeksAktif <= 0 ? pilihan.length - 1 : indeksAktif - 1);
+      sorot(berikut);
+      return;
+    }
+    if (e.key === 'Enter' && indeksAktif >= 0 && pilihan[indeksAktif]) {
+      e.preventDefault();
+      pilih(pilihan[indeksAktif]);
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (!formManual.contains(e.target)) { tutupSaran(); }
+  });
+
+  formManual.addEventListener('submit', function (e) {
     e.preventDefault();
-    var nis = document.getElementById('nis').value.trim();
-    if (nis !== '') { kirim({ nis: nis }); }
+    if (indeksAktif >= 0 && pilihan[indeksAktif]) { pilih(pilihan[indeksAktif]); }
+    var teks = inputCari.value.trim();
+    if (teks === '') { tutupSaran(); return; }
+    var nis = nisTerpilih.value.trim();
+    if (nis !== '') { kirim({ nis: nis }); return; }
+    if (pilihan.length === 1) { pilih(pilihan[0]); kirim({ nis: pilihan[0].nis }); return; }
+    /* Enter tanpa memilih: cari sekali lagi, pakai bila tepat satu siswa. */
+    window.SiDiPa.get(ENDPOINT_CARI, { q: teks }).then(function (res) {
+      var daftar = (res && res.siswa) || [];
+      if (daftar.length === 1) {
+        pilih(daftar[0]);
+        kirim({ nis: daftar[0].nis });
+      } else if (daftar.length === 0) {
+        tampil(false, 'Siswa tidak ditemukan', 'Coba NIS atau nama lain, atau pilih dari saran.');
+      } else {
+        renderSaran(daftar);
+        tampil(false, 'Beberapa siswa cocok', 'Pilih salah satu siswa dari daftar saran.');
+      }
+    }).catch(function () {
+      tampil(false, 'Tidak ada koneksi', 'Periksa jaringan lalu coba lagi.');
+    });
   });
 
   var mulai = document.getElementById('mulai-kamera');
   var henti = document.getElementById('henti-kamera');
   mulai.addEventListener('click', function () {
+    bukaAudio();
     if (typeof window.Html5Qrcode === 'undefined') {
-      tampil(false, 'Pustaka QR belum termuat', 'Gunakan Input NIS manual atau muat ulang halaman.');
+      tampil(false, 'Pustaka QR belum termuat', 'Gunakan Cari NIS / nama siswa atau muat ulang halaman.');
       return;
     }
-    if (pemindai) return;
+    if (pemindai) { return; }
     pemindai = new window.Html5Qrcode('qr-reader', { formatsToSupport: [0] });
     window.Html5Qrcode.getCameras().then(function (kamera) {
       var id = kamera.length ? (kamera[kamera.length - 1].id) : null;
       var opsi = id ? { deviceId: { exact: id } } : { facingMode: 'environment' };
       return pemindai.start(opsi, { fps: 8, qrbox: { width: 220, height: 220 } },
-        function (teks) { if (!sibuk && teks) kirim({ token: String(teks).trim() }); },
+        function (teks) { if (!sibuk && teks) { kirim({ token: String(teks).trim() }); } },
         function () {});
     }).then(function () {
       mulai.disabled = true; henti.disabled = false;
@@ -201,7 +384,7 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
     });
   });
   henti.addEventListener('click', function () {
-    if (!pemindai) return;
+    if (!pemindai) { return; }
     pemindai.stop().then(function () { pemindai.clear(); }).catch(function () {}).then(function () {
       pemindai = null; mulai.disabled = false; henti.disabled = true;
     });

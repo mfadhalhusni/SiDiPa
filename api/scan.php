@@ -2,9 +2,11 @@
 declare(strict_types=1);
 
 /*
- | Endpoint pemindaian QR / NIS. Semua keputusan memakai WAKTU SERVER
- | (Asia/Jakarta), bukan waktu perangkat. Duplikasi hari+jenis ditolak.
- | Respons JSON tidak pernah memuat qr_token maupun identitas pencatat.
+ | Endpoint pemindaian QR / NIS. QR kartu berisi USERNAME SISWA (bukan NIS
+ | dan bukan lagi qr_token); fallback manual tetap memakai NIS. Semua
+ | keputusan memakai WAKTU SERVER (Asia/Jakarta), bukan waktu perangkat.
+ | Duplikasi hari+jenis ditolak. Respons JSON tidak pernah memuat qr_token
+ | maupun identitas pencatat.
  */
 
 require_once __DIR__ . '/../app/bootstrap.php';
@@ -31,24 +33,33 @@ if (!isset($modeValid[$mode])) {
 $token = post('token', '', 100);
 $nis = post('nis', '', 30);
 
-$syarat = ['s.aktif = 1'];
+$syarat = ['s.aktif = 1', "p.peran = 'siswa'"];
 $param = [];
 if ($token !== '') {
-    $syarat[] = 's.qr_token = ?';
+    /* QR terbaru berisi username siswa. Token acak lama sengaja tidak
+       diterima: seluruh kartu wajib dicetak ulang (lihat README bagian 18). */
+    $syarat[] = 'p.username = ?';
     $param[] = $token;
 } elseif ($nis !== '') {
     $syarat[] = 's.nis = ?';
     $param[] = $nis;
 } else {
-    json_keluar(['ok' => false, 'pesan' => 'Pindai QR atau isi NIS terlebih dahulu.'], 422);
+    json_keluar(['ok' => false, 'pesan' => 'Pindai QR kartu siswa atau isi NIS/nama terlebih dahulu.'], 422);
 }
 $siswa = db_satu(
-    'SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama AS kelas
+    'SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama AS kelas, p.username
      FROM siswa s LEFT JOIN kelas k ON k.id = s.kelas_id
+     JOIN pengguna p ON p.id = s.pengguna_id
      WHERE ' . implode(' AND ', $syarat) . ' LIMIT 1',
     $param
 );
 if ($siswa === null) {
+    if ($token !== '' && (int) db_nilai('SELECT COUNT(*) FROM siswa WHERE qr_token = ?', [$token], 0) > 0) {
+        json_keluar([
+            'ok' => false,
+            'pesan' => 'Kartu QR lama sudah tidak berlaku. Cetak ulang kartu siswa; QR sekarang memuat username siswa.',
+        ], 409);
+    }
     json_keluar(['ok' => false, 'pesan' => 'Siswa tidak ditemukan atau sudah tidak aktif.'], 404);
 }
 
@@ -201,6 +212,7 @@ json_keluar([
     'siswa' => [
         'id' => $siswaId,
         'nis' => (string) $siswa['nis'],
+        'username' => (string) $siswa['username'],
         'nama' => (string) $siswa['nama'],
         'kelas' => (string) ($siswa['kelas'] ?? '-'),
     ],
