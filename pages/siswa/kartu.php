@@ -7,6 +7,10 @@ require_once __DIR__ . '/../../app/bootstrap.php';
 
 $pengguna = auth_wajib(['siswa', 'wali']);
 $siswa = siswa_akun((int) $pengguna['id'], (string) $pengguna['peran']);
+/* Username login MILIK SISWA (bukan username wali yang sedang membuka kartu). */
+$usernameSiswa = $siswa !== null
+    ? (string) db_nilai('SELECT username FROM pengguna WHERE id = ?', [(int) $siswa['pengguna_id']], '-')
+    : '-';
 $namaSekolah = (string) pengaturan('nama_sekolah', 'SMK SiDiPa');
 ?>
 <!doctype html>
@@ -24,7 +28,7 @@ $namaSekolah = (string) pengaturan('nama_sekolah', 'SMK SiDiPa');
   <div class="cetak-alat">
     <p class="petunjuk-cetak">
       Tunjukkan QR ini kepada guru/petugas saat scan masuk dan sholat. QR berisi token unik, bukan NIS.
-      Jika kartu hilang, minta admin membuat ulang token.
+      Baris <strong>Login</strong> adalah username untuk masuk ke akun siswa (bukan NIS/NISN). Jika kartu hilang, minta admin membuat ulang token.
     </p>
     <div class="baris-tombol">
       <?php if ($siswa !== null): ?>
@@ -44,6 +48,7 @@ $namaSekolah = (string) pengaturan('nama_sekolah', 'SMK SiDiPa');
           <p class="nama"><?= e($siswa['nama']) ?></p>
           <div class="baris">NIS <strong class="mono"><?= e($siswa['nis']) ?></strong></div>
           <div class="baris">Kelas <strong><?= e($siswa['kelas'] ?? '-') ?></strong></div>
+          <div class="baris">Login <strong class="mono"><?= e($usernameSiswa) ?></strong></div>
           <p class="kaki"><?= e(mb_strtoupper(mb_substr($namaSekolah, 0, 34, 'UTF-8'), 'UTF-8')) ?></p>
         </div>
         <div class="qr" role="img" aria-label="QR kartu siswa" data-qr="<?= e($siswa['qr_token']) ?>"></div>

@@ -67,6 +67,33 @@ try {
                 ? 'Unggah foto profil siap dipakai.'
                 : 'Belum ada. Jalankan ALTER TABLE pada bagian 16 README agar siswa dapat mengunggah foto profil.'
         );
+        $predikatLengkap = (int) db_nilai(
+            "SELECT COUNT(*) FROM pengaturan WHERE kunci IN
+             ('predikat_aplus','predikat_a','predikat_bplus','predikat_b',
+              'predikat_bminus','predikat_cplus','predikat_c','predikat_d')",
+            [],
+            0
+        );
+        tambah_cek(
+            'Skala predikat 8 tingkat',
+            $predikatLengkap === 8,
+            $predikatLengkap === 8
+                ? 'Kedelapan ambang A+/A/B+/B/B-/C+/C/D tersedia.'
+                : 'Baru ' . $predikatLengkap . ' dari 8 ambang. Jalankan SQL pada bagian 17 README untuk menambah predikat_bplus, predikat_bminus, dan predikat_cplus.'
+        );
+        $siswaNis = (int) db_nilai(
+            "SELECT COUNT(*) FROM pengguna p JOIN siswa s ON s.pengguna_id = p.id
+             WHERE p.peran = 'siswa' AND p.username REGEXP '^[0-9]+$'",
+            [],
+            0
+        );
+        tambah_cek(
+            'Username siswa bukan NIS',
+            $siswaNis === 0,
+            $siswaNis === 0
+                ? 'Seluruh akun siswa sudah memakai username.'
+                : $siswaNis . ' akun siswa masih memakai NIS sebagai login. Pakai tombol "Buatkan username massal" di Data siswa (bagian 17 README).'
+        );
     }
 } catch (Throwable $galat) {
     tambah_cek('Koneksi database', false, 'Gagal: ' . $galat->getMessage());

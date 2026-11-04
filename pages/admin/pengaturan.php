@@ -10,7 +10,7 @@ $grup = [
     'sekolah' => 'Identitas sekolah',
     'jam' => 'Jam dan waktu',
     'poin' => 'Bobot poin otomatis',
-    'predikat' => 'Ambang predikat per aspek',
+    'predikat' => 'Ambang predikat (8 tingkat)',
     'pembinaan' => 'Ambang pembinaan',
     'penilaian' => 'Poin penilaian bulanan',
     'lainnya' => 'Lainnya',
@@ -45,11 +45,14 @@ $definisi = [
         ['kunci' => 'batas_pengurangan_harian', 'label' => 'Maksimal pengurangan manual per aspek per hari', 'tipe' => 'angka'],
     ],
     'predikat' => [
-        ['kunci' => 'predikat_aplus', 'label' => 'A+ jika persentase lebih dari', 'tipe' => 'angka'],
-        ['kunci' => 'predikat_a', 'label' => 'Ambang A', 'tipe' => 'angka'],
-        ['kunci' => 'predikat_b', 'label' => 'Ambang B', 'tipe' => 'angka'],
-        ['kunci' => 'predikat_c', 'label' => 'Ambang C', 'tipe' => 'angka'],
-        ['kunci' => 'predikat_d', 'label' => 'Ambang D (di bawahnya menjadi E)', 'tipe' => 'angka'],
+        ['kunci' => 'predikat_aplus', 'label' => 'A+ mulai persentase (bawaan 95)', 'tipe' => 'angka'],
+        ['kunci' => 'predikat_a', 'label' => 'A mulai persentase (bawaan 90)', 'tipe' => 'angka'],
+        ['kunci' => 'predikat_bplus', 'label' => 'B+ mulai persentase (bawaan 85)', 'tipe' => 'angka'],
+        ['kunci' => 'predikat_b', 'label' => 'B mulai persentase (bawaan 80)', 'tipe' => 'angka'],
+        ['kunci' => 'predikat_bminus', 'label' => 'B- mulai persentase (bawaan 75)', 'tipe' => 'angka'],
+        ['kunci' => 'predikat_cplus', 'label' => 'C+ mulai persentase (bawaan 70)', 'tipe' => 'angka'],
+        ['kunci' => 'predikat_c', 'label' => 'C mulai persentase (bawaan 60)', 'tipe' => 'angka'],
+        ['kunci' => 'predikat_d', 'label' => 'D mulai persentase (bawaan 0; di bawahnya tetap D)', 'tipe' => 'angka'],
     ],
     'pembinaan' => [
         ['kunci' => 'ambang_pembinaan_persen', 'label' => 'Persentase di bawah nilai ini masuk pembinaan', 'tipe' => 'angka'],
@@ -252,9 +255,25 @@ halaman_atas('Pengaturan', 'Admin / Kalibrasi sistem', ['nav' => 'profil']);
   <?php endforeach; ?>
 
   <section class="kartu form-kartu">
+    <p class="label-kecil">Skala berlaku</p>
+    <h2>Delapan tingkat predikat</h2>
+    <p class="teks-kecil">Berlaku untuk sertifikat, rekap, laporan XLSX, kartu skor, dan predikat keseluruhan di beranda siswa. Urutan ambang harus menurun; nilai di bawah ambang C selalu menjadi <strong>D</strong>.</p>
+    <div class="tabel-bungkus">
+      <table class="tabel">
+        <thead><tr><th>Predikat</th><th>Mulai persentase</th><th>Keterangan</th></tr></thead>
+        <tbody>
+        <?php $b = ambang_predikat(); $ket = keterangan_predikat(); foreach (URUTAN_PREDIKAT as $kode): ?>
+          <tr><td><strong><?= e($kode) ?></strong></td><td class="mono"><?= e(rtrim(rtrim(number_format($b[$kode], 1, ',', '.'), '0'), ',')) ?>%</td><td><?= e($ket[$kode]) ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="kartu form-kartu">
     <p class="label-kecil">Per aspek</p>
     <h2>Target semester</h2>
-    <p class="teks-kecil">Persentase = skor aspek / target x 100. Predikat dihitung per aspek; tidak ada predikat keseluruhan.</p>
+    <p class="teks-kecil">Persentase = skor aspek / target x 100. Predikat dihitung per aspek; beranda siswa juga menampilkan predikat keseluruhan.</p>
     <div class="form-grid">
       <?php foreach ($daftarAspek as $a): ?>
         <div class="form-baris">

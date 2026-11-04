@@ -28,8 +28,10 @@ if ($siswaId > 0) {
     $param[] = $kelasId;
 }
 $daftarSiswa = db_semua(
-    'SELECT s.id, s.nis, s.nama, s.qr_token, COALESCE(k.nama, \'-\') AS kelas, k.tingkat, k.jurusan
+    'SELECT s.id, s.nis, s.nama, s.qr_token, COALESCE(k.nama, \'-\') AS kelas, k.tingkat, k.jurusan,
+            COALESCE(p.username, \'-\') AS username
      FROM siswa s LEFT JOIN kelas k ON k.id = s.kelas_id
+     LEFT JOIN pengguna p ON p.id = s.pengguna_id
      WHERE ' . implode(' AND ', $syarat) . '
      ORDER BY k.nama, s.nama LIMIT 300',
     $param
@@ -58,6 +60,7 @@ foreach ($daftarKelas as $k) {
     <p class="petunjuk-cetak">
       <strong><?= e($labelKelas) ?></strong> · <?= count($daftarSiswa) ?> kartu.
       Saat mencetak pilih ukuran kertas sesuai <strong>85,6 × 54 mm</strong>, skala 100%, dan matikan header/footer browser.
+      Kartu memuat username login siswa, bukan NIS sebagai kata sandi akun.
     </p>
     <form method="get" action="<?= e(url('pages/admin/kartu.php')) ?>" class="baris-tombol">
       <label class="sembunyi" for="kelas">Kelas</label>
@@ -87,6 +90,7 @@ foreach ($daftarKelas as $k) {
           <p class="nama"><?= e($s['nama']) ?></p>
           <div class="baris">NIS <strong class="mono"><?= e($s['nis']) ?></strong></div>
           <div class="baris">Kelas <strong><?= e($s['kelas']) ?></strong></div>
+          <div class="baris">Login <strong class="mono"><?= e($s['username'] ?? '-') ?></strong></div>
           <p class="kaki"><?= e(mb_strtoupper(mb_substr($namaSekolah, 0, 34, 'UTF-8'), 'UTF-8')) ?></p>
         </div>
         <div class="qr" role="img" aria-label="QR kartu <?= e($s['nama']) ?>" data-qr="<?= e($s['qr_token']) ?>"></div>

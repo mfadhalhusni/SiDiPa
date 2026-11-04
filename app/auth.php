@@ -380,7 +380,7 @@ function auth_masuk(string $username, string $kataSandi): array
 {
     $username = teks($username, 60);
     if ($username === '' || $kataSandi === '') {
-        return ['ok' => false, 'pesan' => 'Nama pengguna dan kata sandi wajib diisi.'];
+        return ['ok' => false, 'pesan' => 'Username dan kata sandi wajib diisi.'];
     }
     if (auth_diblokir($username)) {
         log_akses('login_diblokir', $username);
@@ -394,7 +394,12 @@ function auth_masuk(string $username, string $kataSandi): array
     }
     if ($pengguna === null || !password_verify($kataSandi, (string) $pengguna['password_hash'])) {
         log_akses('login_gagal', $username);
-        return ['ok' => false, 'pesan' => 'Nama pengguna atau kata sandi salah.'];
+        /* Siswa tidak lagi masuk dengan NIS/NISN. Beri petunjuk yang jelas
+           bila yang diketik masih berupa angka dan tidak ada akunnya. */
+        if ($pengguna === null && preg_match('/^\d+$/', $username)) {
+            return ['ok' => false, 'pesan' => 'NIS/NISN tidak dipakai untuk login lagi. Masukkan username siswa (mis. ahmad.rizky). Hubungi admin bila lupa.'];
+        }
+        return ['ok' => false, 'pesan' => 'Username atau kata sandi salah.'];
     }
     if ((int) $pengguna['aktif'] !== 1) {
         log_akses('login_nonaktif', $username, (int) $pengguna['id']);

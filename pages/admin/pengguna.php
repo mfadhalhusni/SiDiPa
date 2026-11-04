@@ -20,12 +20,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $peran = in_array((string) ($_POST['peran'] ?? ''), $peranList, true) ? (string) $_POST['peran'] : 'guru';
         $aktif = post_bool('aktif') ? 1 : 0;
         $wajibGanti = post_bool('wajib_ganti_password') ? 1 : 0;
+        if ($peran === 'siswa') {
+            $username = username_siswa_bersih($username);
+        }
         $sandi = (string) ($_POST['kata_sandi'] ?? '');
+        $sahUsername = $peran === 'siswa' ? username_siswa_sah($username) : '';
         $form = ['id' => $id, 'username' => $username, 'nama' => $nama, 'peran' => $peran,
             'aktif' => $aktif, 'wajib_ganti_password' => $wajibGanti];
 
         if ($username === '' || $nama === '') {
-            $pesanGalat = 'Nama pengguna dan nama lengkap wajib diisi.';
+            $pesanGalat = 'Username dan nama lengkap wajib diisi.';
+        } elseif ($sahUsername !== '') {
+            $pesanGalat = $sahUsername;
         } elseif ($id === 0 && !auth_sandi_valid($sandi)) {
             $pesanGalat = 'Kata sandi awal minimal 8 karakter.';
         } elseif ($id > 0 && $sandi !== '' && !auth_sandi_valid($sandi)) {
@@ -36,7 +42,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             try {
                 db_transaksi(function () use ($id, $username, $nama, $peran, $aktif, $wajibGanti, $sandi): void {
                     if (db_satu('SELECT id FROM pengguna WHERE username = ? AND id <> ?', [$username, $id]) !== null) {
-                        throw new RuntimeException('Nama pengguna sudah dipakai.');
+                        throw new RuntimeException('Username sudah dipakai.');
                     }
                     if ($id > 0) {
                         db_jalankan(
@@ -109,8 +115,9 @@ halaman_atas('Pengguna', 'Admin / Akses', ['nav' => 'profil']);
     <input type="hidden" name="aksi" value="simpan">
     <input type="hidden" name="id" value="<?= e($form['id']) ?>">
     <div class="form-grid">
-      <div class="form-baris"><label for="username">Nama pengguna <span class="wajib">wajib</span></label>
-        <input class="input" id="username" name="username" value="<?= e($form['username']) ?>" required maxlength="60" autocomplete="off"></div>
+      <div class="form-baris"><label for="username">Username <span class="wajib">wajib</span></label>
+        <input class="input" id="username" name="username" value="<?= e($form['username']) ?>" required maxlength="60" autocomplete="off">
+        <p class="bantuan">Untuk akun siswa wajib memuat huruf dan <strong>tidak boleh berupa NIS/NISN</strong>. Lihat menu Data siswa untuk membuat username otomatis dari nama.</p></div>
       <div class="form-baris"><label for="nama">Nama lengkap <span class="wajib">wajib</span></label>
         <input class="input" id="nama" name="nama" value="<?= e($form['nama']) ?>" required maxlength="120"></div>
       <div class="form-baris"><label for="peran">Peran</label>
@@ -137,7 +144,7 @@ halaman_atas('Pengguna', 'Admin / Akses', ['nav' => 'profil']);
 <?= bagian_judul('Daftar pengguna') ?>
 <div class="tabel-bungkus">
   <table class="tabel">
-    <thead><tr><th>Nama</th><th>Nama pengguna</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead>
+    <thead><tr><th>Nama</th><th>Username</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead>
     <tbody>
     <?php foreach ($daftar as $u): ?>
       <tr>

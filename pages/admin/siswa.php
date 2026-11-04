@@ -9,7 +9,7 @@ $daftarWali = db_semua("SELECT id, username, nama FROM pengguna WHERE peran = 'w
 $pesanGalat = '';
 
 $form = [
-    'id' => 0, 'nis' => '', 'nama' => '', 'jenis_kelamin' => 'L', 'kelas_id' => 0,
+    'id' => 0, 'nis' => '', 'username' => '', 'nama' => '', 'jenis_kelamin' => 'L', 'kelas_id' => 0,
     'nama_wali' => '', 'no_wa_wali' => '', 'wali_pengguna_id' => 0, 'aktif' => 1,
 ];
 
@@ -21,6 +21,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $id = post_int('id');
         $nis = post('nis', '', 30);
         $nama = post('nama', '', 120);
+        /* Username login siswa terpisah dari NIS. Kosong = dibuat otomatis
+           dari nama (siswa baru) atau dipertahankan (siswa lama). */
+        $usernameDipilih = username_siswa_bersih(post('username', '', 60));
+        $penggunaIdLama = 0;
+        if ($id > 0) {
+            $akunLama = db_satu('SELECT p.id, p.username FROM siswa s JOIN pengguna p ON p.id = s.pengguna_id WHERE s.id = ?', [$id]);
+            $penggunaIdLama = (int) ($akunLama['id'] ?? 0);
+        }
+        if ($usernameDipilih === '' && $id > 0 && $penggunaIdLama > 0) {
+            $username = username_siswa_bersih((string) ($akunLama['username'] ?? ''));
+        } elseif ($usernameDipilih === '') {
+            $username = username_siswa_unik(username_siswa_dari_nama($nama));
+        } else {
+            $username = $usernameDipilih;
+        }
         $jk = in_array((string) ($_POST['jenis_kelamin'] ?? 'L'), ['L', 'P'], true) ? (string) $_POST['jenis_kelamin'] : 'L';
         $kelasId = post_int('kelas_id');
         $namaWali = post('nama_wali', '', 120);
@@ -28,19 +43,24 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $waliId = post_int('wali_pengguna_id');
         $aktif = post_bool('aktif') ? 1 : 0;
 
-        $form = ['id' => $id, 'nis' => $nis, 'nama' => $nama, 'jenis_kelamin' => $jk,
+        $form = ['id' => $id, 'nis' => $nis, 'username' => $usernameDipilih, 'nama' => $nama, 'jenis_kelamin' => $jk,
             'kelas_id' => $kelasId, 'nama_wali' => $namaWali, 'no_wa_wali' => $noWa,
             'wali_pengguna_id' => $waliId, 'aktif' => $aktif];
 
+        $galatUsername = username_siswa_sah($username);
         if ($nis === '' || $nama === '' || $kelasId <= 0) {
             $pesanGalat = 'NIS, nama, dan kelas wajib diisi.';
+        } elseif ($galatUsername !== '') {
+            $pesanGalat = $galatUsername;
+        } elseif (db_satu('SELECT id FROM pengguna WHERE username = ? AND id <> ?', [$username, $penggunaIdLama]) !== null) {
+            $pesanGalat = 'Username ' . $username . ' sudah dipakai akun lain.';
         } elseif (db_satu('SELECT id FROM kelas WHERE id = ?', [$kelasId]) === null) {
             $pesanGalat = 'Kelas yang dipilih tidak ada.';
         } elseif ($waliId > 0 && db_satu("SELECT id FROM pengguna WHERE id = ? AND peran = 'wali'", [$waliId]) === null) {
             $pesanGalat = 'Akun wali murid yang dipilih tidak valid.';
         } else {
             try {
-                db_transaksi(function () use ($id, $nis, $nama, $jk, $kelasId, $namaWali, $noWa, $waliId, $aktif): void {
+                db_transaksi(function () use ($id, $nis, $username, $nama, $jk, $kelasId, $namaWali, $noWa, $waliId, $aktif): void {
                     if ($id > 0) {
                         $lama = db_satu('SELECT id, pengguna_id FROM siswa WHERE id = ? FOR UPDATE', [$id]);
                         if ($lama === null) {
@@ -50,25 +70,25 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                         if ($bentrok !== null) {
                             throw new RuntimeException('NIS ' . $nis . ' sudah dipakai siswa lain.');
                         }
-                        $userBentrok = db_satu('SELECT id FROM pengguna WHERE username = ? AND id <> ?', [$nis, (int) $lama['pengguna_id']]);
+                        $userBentrok = db_satu('SELECT id FROM pengguna WHERE username = ? AND id <> ?', [$username, (int) $lama['pengguna_id']]);
                         if ($userBentrok !== null) {
-                            throw new RuntimeException('Nama pengguna ' . $nis . ' sudah dipakai.');
+                            throw new RuntimeException('Username ' . $username . ' sudah dipakai.');
                         }
                         db_jalankan(
                             'UPDATE siswa SET nis = ?, nama = ?, jenis_kelamin = ?, kelas_id = ?, nama_wali = ?, no_wa_wali = ?, wali_pengguna_id = ?, aktif = ? WHERE id = ?',
                             [$nis, $nama, $jk, $kelasId, $namaWali !== '' ? $namaWali : null, $noWa !== '' ? $noWa : null,
                                 $waliId > 0 ? $waliId : null, $aktif, $id]
                         );
-                        db_jalankan('UPDATE pengguna SET username = ?, nama = ?, aktif = ? WHERE id = ?', [$nis, $nama, $aktif, (int) $lama['pengguna_id']]);
+                        db_jalankan('UPDATE pengguna SET username = ?, nama = ?, aktif = ? WHERE id = ?', [$username, $nama, $aktif, (int) $lama['pengguna_id']]);
                     } else {
                         if (db_satu('SELECT id FROM siswa WHERE nis = ?', [$nis]) !== null) {
                             throw new RuntimeException('NIS ' . $nis . ' sudah terdaftar.');
                         }
-                        if (db_satu('SELECT id FROM pengguna WHERE username = ?', [$nis]) !== null) {
-                            throw new RuntimeException('Nama pengguna ' . $nis . ' sudah dipakai.');
+                        if (db_satu('SELECT id FROM pengguna WHERE username = ?', [$username]) !== null) {
+                            throw new RuntimeException('Username ' . $username . ' sudah dipakai.');
                         }
                         $penggunaId = db_sisip('pengguna', [
-                            'username' => $nis,
+                            'username' => $username,
                             'password_hash' => password_hash('Siswa@2026', PASSWORD_DEFAULT),
                             'nama' => $nama,
                             'peran' => 'siswa',
@@ -90,12 +110,47 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                     }
                 });
                 log_akses($id > 0 ? 'ubah_siswa' : 'tambah_siswa', 'siswa', $id > 0 ? $id : null);
-                flash($id > 0 ? 'Data siswa diperbarui.' : 'Siswa ditambahkan. Kata sandi sementara: Siswa@2026');
+                flash($id > 0
+                    ? 'Data siswa diperbarui. Username login: ' . $username
+                    : 'Siswa ditambahkan. Username login: ' . $username . ' · Kata sandi sementara: Siswa@2026');
                 alihkan('pages/admin/siswa.php');
             } catch (Throwable $galat) {
                 $pesanGalat = $galat->getMessage();
             }
         }
+    } elseif ($aksi === 'buat_username') {
+        /* Migrasi massal: semua akun siswa yang username-nya masih berupa
+           angka (NIS lama) dibuatkan username dari nama. Aman dijalankan
+           berulang; akun yang sudah memakai username huruf tidak diubah. */
+        try {
+            $daftarLama = db_semua(
+                "SELECT s.id, s.nis, s.nama, p.id AS pengguna_id, p.username
+                 FROM siswa s JOIN pengguna p ON p.id = s.pengguna_id
+                 WHERE p.peran = 'siswa' AND p.username REGEXP '^[0-9]+$'
+                 ORDER BY s.id"
+            );
+            $hasil = [];
+            db_transaksi(function () use ($daftarLama, &$hasil): void {
+                $terpakai = [];
+                foreach ($daftarLama as $s) {
+                    $baru = username_siswa_unik(
+                        username_siswa_dari_nama((string) $s['nama']),
+                        (int) $s['pengguna_id'],
+                        $terpakai
+                    );
+                    db_jalankan('UPDATE pengguna SET username = ? WHERE id = ?', [$baru, (int) $s['pengguna_id']]);
+                    $terpakai[] = $baru;
+                    $hasil[] = ['nis' => (string) $s['nis'], 'nama' => (string) $s['nama'],
+                        'lama' => (string) $s['username'], 'baru' => $baru];
+                }
+            });
+            $_SESSION['hasil_username_siswa'] = $hasil;
+            log_akses('buat_username_siswa_massal', 'pengguna', count($hasil));
+            flash(count($hasil) . ' akun siswa sudah memakai username baru. Daftarnya tampil di bawah.');
+        } catch (Throwable $galat) {
+            $pesanGalat = 'Migrasi username gagal: ' . $galat->getMessage();
+        }
+        alihkan('pages/admin/siswa.php');
     } elseif (in_array($aksi, ['aktifkan', 'nonaktifkan'], true)) {
         $id = post_int('id');
         $nilai = $aksi === 'aktifkan' ? 1 : 0;
@@ -136,10 +191,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 }
 
 if (isset($_GET['edit'])) {
-    $baris = db_satu('SELECT * FROM siswa WHERE id = ?', [bilangan($_GET['edit'])]);
+    $baris = db_satu('SELECT s.*, p.username FROM siswa s JOIN pengguna p ON p.id = s.pengguna_id WHERE s.id = ?', [bilangan($_GET['edit'])]);
     if ($baris !== null) {
         $form = [
-            'id' => (int) $baris['id'], 'nis' => $baris['nis'], 'nama' => $baris['nama'],
+            'id' => (int) $baris['id'], 'nis' => $baris['nis'], 'username' => (string) ($baris['username'] ?? ''), 'nama' => $baris['nama'],
             'jenis_kelamin' => $baris['jenis_kelamin'], 'kelas_id' => (int) $baris['kelas_id'],
             'nama_wali' => (string) $baris['nama_wali'], 'no_wa_wali' => (string) $baris['no_wa_wali'],
             'wali_pengguna_id' => (int) ($baris['wali_pengguna_id'] ?? 0), 'aktif' => (int) $baris['aktif'],
@@ -152,7 +207,8 @@ $filterKelas = bilangan($_GET['kelas'] ?? 0);
 $syarat = ['1 = 1'];
 $param = [];
 if ($cari !== '') {
-    $syarat[] = '(s.nama LIKE ? OR s.nis LIKE ?)';
+    $syarat[] = '(s.nama LIKE ? OR s.nis LIKE ? OR p.username LIKE ?)';
+    $param[] = '%' . $cari . '%';
     $param[] = '%' . $cari . '%';
     $param[] = '%' . $cari . '%';
 }
@@ -179,6 +235,28 @@ halaman_atas('Data siswa', 'Admin / Data master', [
 ?>
 <?php if ($pesanGalat !== ''): ?><div class="pesan pesan-galat" role="alert"><?= ikon('peringatan', 20) ?><span><?= e($pesanGalat) ?></span></div><?php endif; ?>
 
+<?php
+$hasilUsername = $_SESSION['hasil_username_siswa'] ?? [];
+unset($_SESSION['hasil_username_siswa']);
+if (is_array($hasilUsername) && $hasilUsername !== []): ?>
+<section class="kartu form-kartu">
+  <p class="label-kecil">Hasil migrasi</p>
+  <h2>Username siswa yang baru dibuat</h2>
+  <p class="teks-kecil">Kata sandi tidak berubah. Bagikan username ini kepada siswa; <strong>NIS sudah tidak dapat dipakai untuk masuk</strong>. Salin atau cetak halaman ini sebelum ditutup.</p>
+  <div class="tabel-bungkus">
+    <table class="tabel">
+      <thead><tr><th>NIS</th><th>Nama</th><th>Username lama</th><th>Username baru</th></tr></thead>
+      <tbody>
+      <?php foreach ($hasilUsername as $h): ?>
+        <tr><td class="mono"><?= e($h['nis']) ?></td><td><?= e($h['nama']) ?></td>
+          <td class="mono"><?= e($h['lama']) ?></td><td><strong class="mono"><?= e($h['baru']) ?></strong></td></tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</section>
+<?php endif; ?>
+
 <section class="kartu form-kartu">
   <p class="label-kecil"><?= $form['id'] > 0 ? 'Ubah data' : 'Tambah siswa' ?></p>
   <h2><?= $form['id'] > 0 ? e($form['nama']) : 'Siswa baru' ?></h2>
@@ -191,6 +269,9 @@ halaman_atas('Data siswa', 'Admin / Data master', [
         <input class="input" id="nis" name="nis" value="<?= e($form['nis']) ?>" required maxlength="30"></div>
       <div class="form-baris"><label for="nama">Nama lengkap <span class="wajib">wajib</span></label>
         <input class="input" id="nama" name="nama" value="<?= e($form['nama']) ?>" required maxlength="120"></div>
+      <div class="form-baris"><label for="username">Username siswa (untuk login)</label>
+        <input class="input" id="username" name="username" value="<?= e($form['username']) ?>" maxlength="60" placeholder="mis. ahmad.rizky" autocomplete="off">
+        <p class="bantuan">Dipakai siswa saat masuk, <strong>bukan NIS/NISN</strong>. Huruf kecil, angka, titik, strip, atau garis bawah; minimal 3 karakter dan wajib ada huruf. Kosongkan agar dibuat otomatis dari nama.</p></div>
       <div class="form-baris"><label for="jk">Jenis kelamin</label>
         <select class="input" id="jk" name="jenis_kelamin">
           <option value="L" <?= $form['jenis_kelamin'] === 'L' ? 'selected' : '' ?>>Laki-laki</option>
@@ -228,6 +309,17 @@ halaman_atas('Data siswa', 'Admin / Data master', [
   </form>
 </section>
 
+<section class="kartu form-kartu">
+  <p class="label-kecil">Pembaruan akun siswa</p>
+  <h2>Buatkan username untuk semua siswa</h2>
+  <p class="teks-kecil">Tombol ini mengganti username akun siswa yang masih berupa angka NIS dengan username dari nama. Username yang sudah berhuruf <strong>tidak diubah</strong>. Kata sandi tetap, dan NIS tetap dipakai untuk kartu QR serta kode sertifikat.</p>
+  <form method="post" action="<?= e(url('pages/admin/siswa.php')) ?>">
+    <?= csrf_field() ?>
+    <input type="hidden" name="aksi" value="buat_username">
+    <button class="tombol tombol-utama" type="submit" data-konfirmasi="Buatkan username baru bagi semua siswa yang masih memakai NIS sebagai login?"><?= ikon('pengguna', 20) ?> Buatkan username massal</button>
+  </form>
+</section>
+
 <?= bagian_judul('Daftar siswa', 'Maksimal 200 baris. Gunakan pencarian untuk data besar.') ?>
 <section class="kartu">
   <form class="form-grid" method="get" action="<?= e(url('pages/admin/siswa.php')) ?>" style="margin-bottom:14px">
@@ -245,11 +337,12 @@ halaman_atas('Data siswa', 'Admin / Data master', [
 
   <div class="tabel-bungkus">
     <table class="tabel" id="tabel-siswa">
-      <thead><tr><th>NIS</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr></thead>
+      <thead><tr><th>NIS</th><th>Username</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr></thead>
       <tbody>
       <?php foreach ($daftarSiswa as $s): ?>
         <tr>
           <td class="mono"><?= e($s['nis']) ?></td>
+          <td class="mono"><?= e($s['username'] ?? '-') ?></td>
           <td><strong><?= e($s['nama']) ?></strong><br><span class="teks-kecil"><?= e($s['jenis_kelamin'] === 'L' ? 'Laki-laki' : 'Perempuan') ?></span></td>
           <td><?= e($s['kelas'] ?? '-') ?></td>
           <td><span class="badge <?= (int) $s['aktif'] === 1 ? 'badge-toska' : 'badge-koral' ?>"><?= (int) $s['aktif'] === 1 ? 'Aktif' : 'Nonaktif' ?></span></td>
@@ -264,7 +357,7 @@ halaman_atas('Data siswa', 'Admin / Data master', [
           </td>
         </tr>
       <?php endforeach; ?>
-      <?php if ($daftarSiswa === []): ?><tr><td colspan="5" class="tabel-kosong">Belum ada siswa. Tambahkan manual atau impor dari CSV.</td></tr><?php endif; ?>
+      <?php if ($daftarSiswa === []): ?><tr><td colspan="6" class="tabel-kosong">Belum ada siswa. Tambahkan manual atau impor dari CSV.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

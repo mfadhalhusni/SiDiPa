@@ -480,3 +480,89 @@ function tanggal_valid(string $nilai): bool
     [$t, $b, $h] = array_map('intval', explode('-', $nilai));
     return checkdate($b, $h, $t);
 }
+
+/* --------------------------------------------------------------------------
+ | USERNAME SISWA (login tidak lagi memakai NIS/NISN)
+ | --------------------------------------------------------------------------
+ | `pengguna.username` tetap satu-satunya sumber kebenaran. Untuk akun siswa
+ | nilainya kini terpisah dari `siswa.nis`: admin dapat mengisinya sendiri
+ | (form Data siswa / kolom `username` pada CSV), dan bila dikosongkan sistem
+ | membuatnya otomatis dari dua kata pertama nama. NIS tetap dipakai untuk
+ | identitas, kartu QR, pencarian, dan kode sertifikat.
+ */
+
+/** Rapikan username: huruf kecil, hanya a-z 0-9 titik, strip, dan garis bawah. */
+function username_siswa_bersih(string $nilai): string
+{
+    $nilai = strtolower(trim($nilai));
+    $nilai = (string) preg_replace('/[^a-z0-9._-]/', '', $nilai);
+    $nilai = trim($nilai, '.-_');
+    return substr($nilai, 0, 60);
+}
+
+/**
+ * Pesan galat bila username siswa tidak sah; string kosong berarti sah.
+ * Username tidak boleh hanya angka supaya tidak menyerupai / kembali ke NIS.
+ */
+function username_siswa_sah(string $nilai): string
+{
+    $bersih = username_siswa_bersih($nilai);
+    if ($nilai !== '' && $bersih !== $nilai) {
+        return 'Username hanya boleh huruf kecil, angka, titik, strip, atau garis bawah.';
+    }
+    if (strlen($bersih) < 3) {
+        return 'Username siswa minimal 3 karakter.';
+    }
+    if (strlen($bersih) > 60) {
+        return 'Username siswa maksimal 60 karakter.';
+    }
+    if (!preg_match('/[a-z]/', $bersih)) {
+        return 'Username siswa harus memuat huruf, tidak boleh hanya angka seperti NIS.';
+    }
+    if (!preg_match('/^[a-z0-9._-]+$/', $bersih)) {
+        return 'Format username siswa tidak valid.';
+    }
+    return '';
+}
+
+/** Buat calon username dari dua kata pertama nama, mis. "Alya Putri" -> alya.putri. */
+function username_siswa_dari_nama(string $nama): string
+{
+    $nama = strtolower(trim($nama));
+    $nama = (string) preg_replace('/[^a-z0-9\s]/', ' ', $nama);
+    $bagian = preg_split('/\s+/', trim($nama), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    if ($bagian === []) {
+        return 'siswa';
+    }
+    $dasar = implode('.', array_slice($bagian, 0, 2));
+    return substr($dasar, 0, 52); // sisakan ruang untuk akhiran angka
+}
+
+/**
+ * Pastikan username unik di tabel `pengguna` dan dalam satu batch impor.
+ * Bentrokan diberi akhiran 2, 3, ... tanpa mengubah kata dasarnya.
+ */
+function username_siswa_unik(string $dasar, int $kecualiId = 0, array $terpakai = []): string
+{
+    $dasar = username_siswa_bersih($dasar);
+    if ($dasar === '') {
+        $dasar = 'siswa';
+    }
+    $dipakai = [];
+    foreach ($terpakai as $nilai) {
+        $dipakai[strtolower((string) $nilai)] = true;
+    }
+    $kandidat = $dasar;
+    for ($i = 1; $i <= 1000; $i++) {
+        $ada = isset($dipakai[strtolower($kandidat)]) || db_satu(
+            'SELECT id FROM pengguna WHERE username = ? AND id <> ? LIMIT 1',
+            [$kandidat, $kecualiId]
+        ) !== null;
+        if (!$ada) {
+            return $kandidat;
+        }
+        $akhiran = (string) ($i + 1);
+        $kandidat = substr($dasar, 0, 60 - strlen($akhiran)) . $akhiran;
+    }
+    throw new RuntimeException('Username siswa tidak dapat dibuat unik. Hubungi admin.');
+}

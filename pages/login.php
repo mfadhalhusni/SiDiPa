@@ -67,8 +67,9 @@ $didalamFrame = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '')) ===
     <form method="post" action="<?= e(url('pages/login.php')) ?>" autocomplete="off">
       <?= csrf_field() ?>
       <div class="form-baris">
-        <label for="username">Nama pengguna</label>
-        <input class="input" id="username" name="username" type="text" required autocomplete="username" autofocus>
+        <label for="username">Username</label>
+        <input class="input" id="username" name="username" type="text" required autocomplete="username" placeholder="mis. ahmad.rizky" autofocus>
+        <p class="bantuan">Siswa masuk dengan <strong>username siswa</strong>, bukan NIS/NISN. Guru, wali, dan staf memakai username akun masing-masing.</p>
       </div>
       <div class="form-baris">
         <label for="kata_sandi">Kata sandi</label>

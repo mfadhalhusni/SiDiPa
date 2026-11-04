@@ -34,40 +34,78 @@ function semester_wajib(): array
     return $semester;
 }
 
-function ambang_predikat(): array
+/** Urutan delapan tingkat predikat, dari tertinggi ke terendah. */
+const URUTAN_PREDIKAT = ['A+', 'A', 'B+', 'B', 'B-', 'C+', 'C', 'D'];
+
+/** Keterangan singkat tiap predikat, dipakai pada kartu skor dan sertifikat. */
+function keterangan_predikat(): array
 {
     return [
-        'A+' => (float) pengaturan('predikat_aplus', '100'),
-        'A'  => (float) pengaturan('predikat_a', '90'),
-        'B'  => (float) pengaturan('predikat_b', '75'),
-        'C'  => (float) pengaturan('predikat_c', '60'),
-        'D'  => (float) pengaturan('predikat_d', '0'),
+        'A+' => 'Sangat istimewa',
+        'A'  => 'Sangat baik',
+        'B+' => 'Baik sekali',
+        'B'  => 'Baik',
+        'B-' => 'Cukup baik',
+        'C+' => 'Cukup, perlu ditingkatkan',
+        'C'  => 'Cukup',
+        'D'  => 'Perlu pembinaan',
     ];
 }
 
 /**
- * Ambang predikat A+/A/B/C/D/E. Dipakai untuk predikat per aspek PADA
- * SERTIFIKAT maupun untuk predikat keseluruhan di BERANDA SISWA.
+ * Ambang bawaan skala predikat (persentase capaian target, boleh > 100):
+ *
+ *   A+ >= 95 | A >= 90 | B+ >= 85 | B >= 80 | B- >= 75
+ *   C+ >= 70 | C >= 60 | D <  60
+ *
+ * Batas 60 % sengaja disamakan dengan `ambang_pembinaan_persen`, sehingga
+ * predikat D selalu berbarengan dengan status perlu pembinaan. Semua ambang
+ * tetap dapat dikalibrasi admin lewat menu Pengaturan.
+ */
+function ambang_predikat(): array
+{
+    $b = [
+        'A+' => (float) pengaturan('predikat_aplus', '95'),
+        'A'  => (float) pengaturan('predikat_a', '90'),
+        'B+' => (float) pengaturan('predikat_bplus', '85'),
+        'B'  => (float) pengaturan('predikat_b', '80'),
+        'B-' => (float) pengaturan('predikat_bminus', '75'),
+        'C+' => (float) pengaturan('predikat_cplus', '70'),
+        'C'  => (float) pengaturan('predikat_c', '60'),
+        'D'  => (float) pengaturan('predikat_d', '0'),
+    ];
+    /* Instalasi lama menyimpan A+=100, B=75, C=60 tanpa B+/B-/C+. Jika
+       nilai lama membuat dua tingkat tumpang tindih, turunkan ambang yang
+       lebih rendah supaya tangga predikat tetap menurun dan tidak ada
+       tingkat yang mustahil dicapai. */
+    for ($i = 1; $i < count(URUTAN_PREDIKAT); $i++) {
+        $atas = URUTAN_PREDIKAT[$i - 1];
+        $bawah = URUTAN_PREDIKAT[$i];
+        if ($b[$bawah] >= $b[$atas]) {
+            $b[$bawah] = $b[$atas] - 5.0;
+        }
+    }
+    return $b;
+}
+
+/**
+ * Predikat A+/A/B+/B/B-/C+/C/D. Dipakai untuk predikat per aspek PADA
+ * SERTIFIKAT, REKAP, dan LAPORAN maupun predikat keseluruhan di BERANDA SISWA.
+ * Tidak ada lagi predikat E: seluruh nilai di bawah ambang C menjadi D.
  */
 function predikat_dari_persentase(float $persentase): array
 {
     $b = ambang_predikat();
-    if ($persentase > $b['A+']) {
-        return ['kode' => 'A+', 'keterangan' => 'Melampaui target'];
+    $keterangan = keterangan_predikat();
+    foreach (array_slice(URUTAN_PREDIKAT, 0, -1) as $kode) {
+        if ($persentase >= $b[$kode]) {
+            return ['kode' => $kode, 'keterangan' => $keterangan[$kode]];
+        }
     }
-    if ($persentase >= $b['A']) {
-        return ['kode' => 'A', 'keterangan' => 'Sangat baik'];
-    }
-    if ($persentase >= $b['B']) {
-        return ['kode' => 'B', 'keterangan' => 'Baik'];
-    }
-    if ($persentase >= $b['C']) {
-        return ['kode' => 'C', 'keterangan' => 'Cukup'];
-    }
-    if ($persentase >= $b['D']) {
-        return ['kode' => 'D', 'keterangan' => 'Perlu pembinaan'];
-    }
-    return ['kode' => 'E', 'keterangan' => 'Pembinaan intensif'];
+    return [
+        'kode' => 'D',
+        'keterangan' => $persentase >= $b['D'] ? $keterangan['D'] : 'Pembinaan intensif',
+    ];
 }
 
 

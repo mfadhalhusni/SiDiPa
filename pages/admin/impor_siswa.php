@@ -14,7 +14,9 @@ function normalisasi_header(string $nama): string
     $nama = strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $nama)));
     $nama = str_replace([' ', '-', '.', '/'], '_', $nama);
     $peta = [
-        'nis' => 'nis', 'no_induk' => 'nis', 'nomor_induk' => 'nis',
+        'nis' => 'nis', 'no_induk' => 'nis', 'nomor_induk' => 'nis', 'nisn' => 'nis',
+        'username' => 'username', 'nama_pengguna' => 'username', 'user' => 'username',
+        'username_siswa' => 'username', 'login' => 'username',
         'nama' => 'nama', 'nama_siswa' => 'nama', 'nama_lengkap' => 'nama',
         'kelas' => 'kelas', 'nama_kelas' => 'kelas', 'rombel' => 'kelas',
         'jenis_kelamin' => 'jk', 'jeniskelamin' => 'jk', 'jk' => 'jk', 'gender' => 'jk',
@@ -64,6 +66,7 @@ function baca_csv_siswa(string $path): array
         $hasil[] = [
             'baris' => $nomor,
             'nis' => $ambil('nis'),
+            'username' => $ambil('username'),
             'nama' => $ambil('nama'),
             'kelas' => $ambil('kelas'),
             'jenis_kelamin' => $jk,
@@ -83,11 +86,28 @@ function baca_csv_siswa(string $path): array
 function tandai_duplikat(array &$baris2): void
 {
     $terlihat = [];
+    $usernameTerlihat = [];
+    $terpakai = [];
     foreach ($baris2 as &$r) {
+        $mentah = (string) ($r['username'] ?? '');
+        $r['username'] = $mentah === '' ? '' : username_siswa_bersih($mentah);
         if ($r['nis'] === '' || $r['nama'] === '' || $r['kelas'] === '') {
             $r['status'] = 'galat';
             $r['catatan'] = 'NIS, nama, atau kelas kosong.';
             continue;
+        }
+        if ($mentah !== '' && $r['username'] !== $mentah) {
+            $r['status'] = 'galat';
+            $r['catatan'] = 'Username mengandung karakter yang tidak diizinkan.';
+            continue;
+        }
+        if ($mentah !== '') {
+            $sah = username_siswa_sah($r['username']);
+            if ($sah !== '') {
+                $r['status'] = 'galat';
+                $r['catatan'] = $sah;
+                continue;
+            }
         }
         $kunci = strtolower($r['nis']);
         if (isset($terlihat[$kunci])) {
@@ -96,11 +116,25 @@ function tandai_duplikat(array &$baris2): void
             continue;
         }
         $terlihat[$kunci] = $r['baris'];
+        if ($r['username'] === '') {
+            /* Kolom username kosong: buat otomatis dari nama dan pastikan
+               unik terhadap DB maupun baris lain dalam berkas yang sama. */
+            $r['username'] = username_siswa_unik(
+                username_siswa_dari_nama((string) $r['nama']), 0, $terpakai
+            );
+            $r['catatan'] = 'Username dibuat otomatis: ' . $r['username'];
+        } elseif (isset($usernameTerlihat[strtolower($r['username'])])) {
+            $r['status'] = 'lewati';
+            $r['catatan'] = 'Username ganda di CSV (baris ' . $usernameTerlihat[strtolower($r['username'])] . ').';
+            continue;
+        }
+        $usernameTerlihat[strtolower($r['username'])] = $r['baris'];
+        $terpakai[] = $r['username'];
         $sudahAda = db_satu('SELECT id FROM siswa WHERE nis = ?', [$r['nis']])
-            ?? db_satu('SELECT id FROM pengguna WHERE username = ?', [$r['nis']]);
+            ?? db_satu('SELECT id FROM pengguna WHERE username = ?', [$r['username']]);
         if ($sudahAda !== null) {
             $r['status'] = 'lewati';
-            $r['catatan'] = 'NIS sudah terdaftar.';
+            $r['catatan'] = 'NIS atau username sudah terdaftar.';
         }
     }
     unset($r);
@@ -157,8 +191,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                             $lewati++;
                             continue;
                         }
+                        $username = (string) ($r['username'] ?? '');
+                        if ($username === '') {
+                            $username = username_siswa_dari_nama((string) $r['nama']);
+                        }
                         if (db_satu('SELECT id FROM siswa WHERE nis = ?', [$r['nis']]) !== null
-                            || db_satu('SELECT id FROM pengguna WHERE username = ?', [$r['nis']]) !== null) {
+                            || db_satu('SELECT id FROM pengguna WHERE username = ?', [$username]) !== null) {
                             $lewati++;
                             continue;
                         }
@@ -168,7 +206,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                             $kelasBaru++;
                         }
                         $penggunaId = db_sisip('pengguna', [
-                            'username' => $r['nis'],
+                            'username' => $username,
                             'password_hash' => password_hash('Siswa@2026', PASSWORD_DEFAULT),
                             'nama' => $r['nama'],
                             'peran' => 'siswa',
@@ -215,13 +253,14 @@ halaman_atas('Impor siswa dari CSV', 'Admin / Data master', [
     <?= e($ringkasan['lewati']) ?> baris dilewati,
     <?= e($ringkasan['kelas_baru']) ?> kelas baru dibuat.
     Kata sandi awal siswa: <strong>Siswa@2026</strong> (wajib diganti saat login pertama).
+    Username login tampil di kolom pratinjau; siswa <strong>tidak memakai NIS</strong> untuk masuk.
   </span></div>
 <?php endif; ?>
 
 <section class="kartu form-kartu">
   <p class="label-kecil">Unggah berkas</p>
   <h2>Data siswa lama</h2>
-  <p class="teks-kecil">Kolom wajib: <strong>nis, nama, kelas</strong>. Kolom opsional: jenis_kelamin, nama_wali, no_wa_wali. Pemisah koma atau titik koma dideteksi otomatis. Kelas yang belum ada dibuat otomatis.</p>
+  <p class="teks-kecil">Kolom wajib: <strong>nis, nama, kelas</strong>. Kolom opsional: <strong>username</strong>, jenis_kelamin, nama_wali, no_wa_wali. Bila <code>username</code> kosong, sistem membuatnya otomatis dari nama (mis. <code>ahmad.rizky</code>) dan menambahkan angka bila bentrok. Username tidak boleh hanya angka seperti NIS. Pemisah koma atau titik koma dideteksi otomatis. Kelas yang belum ada dibuat otomatis.</p>
   <form method="post" action="<?= e(url('pages/admin/impor_siswa.php')) ?>" enctype="multipart/form-data">
     <?= csrf_field() ?>
     <input type="hidden" name="langkah" value="pratinjau">
@@ -237,12 +276,13 @@ halaman_atas('Impor siswa dari CSV', 'Admin / Data master', [
   <?= bagian_judul('Pratinjau', 'Periksa sebelum menyimpan. Baris bermasalah otomatis dilewati.') ?>
   <div class="tabel-bungkus">
     <table class="tabel">
-      <thead><tr><th>Baris</th><th>NIS</th><th>Nama</th><th>Kelas</th><th>L/P</th><th>Status</th></tr></thead>
+      <thead><tr><th>Baris</th><th>NIS</th><th>Username</th><th>Nama</th><th>Kelas</th><th>L/P</th><th>Status</th></tr></thead>
       <tbody>
       <?php foreach ($pratinjau as $r): ?>
         <tr>
           <td class="mono"><?= e($r['baris']) ?></td>
           <td class="mono"><?= e($r['nis']) ?></td>
+          <td class="mono"><?= e($r['username'] ?? '') ?></td>
           <td><?= e($r['nama']) ?></td>
           <td><?= e($r['kelas']) ?></td>
           <td><?= e($r['jenis_kelamin']) ?></td>

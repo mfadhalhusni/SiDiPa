@@ -2,6 +2,7 @@
 -- SiDiPa - PAKET DATA CONTOH OPSIONAL (3 kelas, 20 siswa fiktif)
 -- Impor SETELAH database.sql. Semua nama dan nomor adalah data fiktif.
 -- Kata sandi guru: Guru@2026 | Kata sandi siswa: Siswa@2026
+-- Login siswa memakai USERNAME dari nama (bukan NIS); lihat contoh/README.md.
 -- Keduanya wajib diganti pada login pertama.
 -- ==========================================================================
 SET NAMES utf8mb4;
@@ -24,26 +25,26 @@ INSERT IGNORE INTO guru_kelas (guru_id, kelas_id) VALUES
 
 -- 20 akun siswa.
 INSERT IGNORE INTO pengguna (id, username, password_hash, nama, peran, aktif, wajib_ganti_password) VALUES
- (5, '20260100', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Ahmad Rizky Prasetyo', 'siswa', 1, 1),
- (6, '20260101', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Alya Putri Wijaya', 'siswa', 1, 1),
- (7, '20260102', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Bagas Pratama Saputri', 'siswa', 1, 1),
- (8, '20260103', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Dinda Maharani Hidayat', 'siswa', 1, 1),
- (9, '20260104', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Dimas Aditya Lestari', 'siswa', 1, 1),
- (10, '20260105', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Nabila Aulia Kurniawan', 'siswa', 1, 1),
- (11, '20260106', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Fajar Nugroho Anggraini', 'siswa', 1, 1),
- (12, '20260107', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Salsabila Rahma Setiawan', 'siswa', 1, 1),
- (13, '20260108', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Ilham Maulana Ramadhani', 'siswa', 1, 1),
- (14, '20260109', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Citra Amelia Puspita', 'siswa', 1, 1),
- (15, '20260110', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Kevin Saputra Prasetyo', 'siswa', 1, 1),
- (16, '20260111', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Nadia Kusuma Wijaya', 'siswa', 1, 1),
- (17, '20260112', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Rafi Ramadhan Saputri', 'siswa', 1, 1),
- (18, '20260113', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Alya Putri Hidayat', 'siswa', 1, 1),
- (19, '20260114', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Yusuf Mardiansyah Lestari', 'siswa', 1, 1),
- (20, '20260115', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Dinda Maharani Kurniawan', 'siswa', 1, 1),
- (21, '20260116', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Ahmad Rizky Anggraini', 'siswa', 1, 1),
- (22, '20260117', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Nabila Aulia Setiawan', 'siswa', 1, 1),
- (23, '20260118', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Bagas Pratama Ramadhani', 'siswa', 1, 1),
- (24, '20260119', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Salsabila Rahma Puspita', 'siswa', 1, 1);
+ (5, 'ahmad.rizky', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Ahmad Rizky Prasetyo', 'siswa', 1, 1),
+ (6, 'alya.putri', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Alya Putri Wijaya', 'siswa', 1, 1),
+ (7, 'bagas.pratama', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Bagas Pratama Saputri', 'siswa', 1, 1),
+ (8, 'dinda.maharani', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Dinda Maharani Hidayat', 'siswa', 1, 1),
+ (9, 'dimas.aditya', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Dimas Aditya Lestari', 'siswa', 1, 1),
+ (10, 'nabila.aulia', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Nabila Aulia Kurniawan', 'siswa', 1, 1),
+ (11, 'fajar.nugroho', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Fajar Nugroho Anggraini', 'siswa', 1, 1),
+ (12, 'salsabila.rahma', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Salsabila Rahma Setiawan', 'siswa', 1, 1),
+ (13, 'ilham.maulana', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Ilham Maulana Ramadhani', 'siswa', 1, 1),
+ (14, 'citra.amelia', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Citra Amelia Puspita', 'siswa', 1, 1),
+ (15, 'kevin.saputra', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Kevin Saputra Prasetyo', 'siswa', 1, 1),
+ (16, 'nadia.kusuma', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Nadia Kusuma Wijaya', 'siswa', 1, 1),
+ (17, 'rafi.ramadhan', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Rafi Ramadhan Saputri', 'siswa', 1, 1),
+ (18, 'alya.putri2', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Alya Putri Hidayat', 'siswa', 1, 1),
+ (19, 'yusuf.mardiansyah', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Yusuf Mardiansyah Lestari', 'siswa', 1, 1),
+ (20, 'dinda.maharani2', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Dinda Maharani Kurniawan', 'siswa', 1, 1),
+ (21, 'ahmad.rizky2', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Ahmad Rizky Anggraini', 'siswa', 1, 1),
+ (22, 'nabila.aulia2', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Nabila Aulia Setiawan', 'siswa', 1, 1),
+ (23, 'bagas.pratama2', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Bagas Pratama Ramadhani', 'siswa', 1, 1),
+ (24, 'salsabila.rahma2', '$2y$12$/dyJ3y.n3loWAKW88GmdE.AFN6J3mjuqn2hxusqU.lVceaagwBvlm', 'Salsabila Rahma Puspita', 'siswa', 1, 1);
 
 INSERT IGNORE INTO siswa (id, pengguna_id, nis, nama, jenis_kelamin, kelas_id, qr_token, nama_wali, no_wa_wali, aktif) VALUES
  (1, 5, '20260100', 'Ahmad Rizky Prasetyo', 'L', 1, '81489304631599e20d669d7b1577fab1', 'Bapak Hidayat', '628123457000', 1),

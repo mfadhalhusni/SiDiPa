@@ -15,7 +15,7 @@ body.cetak-kartu { background-image: none; }
 .kartu-siswa .info { flex: 1 1 auto; min-width: 0; }
 .kartu-siswa .label-kecil { font-size: 6pt; letter-spacing: .12em; margin: 0; }
 .kartu-siswa .nama { font-size: 10pt; font-weight: 700; line-height: 1.15; margin: 1mm 0 2mm; word-break: break-word; }
-.kartu-siswa .baris { font-size: 7.5pt; font-weight: 500; border-top: 1.5px solid #000; padding-top: 1mm; margin-top: 1mm; }
+.kartu-siswa .baris { font-size: 7.5pt; font-weight: 500; border-top: 1.5px solid #000; padding-top: 1mm; margin-top: 1mm; overflow-wrap: anywhere; }
 .kartu-siswa .qr { width: 24mm; height: 24mm; flex: 0 0 auto; border: 2px solid #000; background: #fff; display: grid; place-items: center; padding: 1mm; }
 .kartu-siswa .qr img, .kartu-siswa .qr canvas, .kartu-siswa .qr svg { width: 100% !important; height: 100% !important; }
 .cetak-alat { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 auto 16px; max-width: 297mm; padding: 14px; background: #fff; border: 3px solid #000; border-radius: 10px; box-shadow: 5px 5px 0 #000; }

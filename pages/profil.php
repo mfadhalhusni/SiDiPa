@@ -88,7 +88,7 @@ halaman_atas('Profil', 'Akun saya', ['nav' => 'profil']);
     <h2><?= e($pengguna['nama']) ?></h2>
     <table class="tabel">
       <tbody>
-        <tr><th>Nama pengguna</th><td><?= e($pengguna['username']) ?></td></tr>
+        <tr><th>Username</th><td class="mono"><?= e($pengguna['username']) ?></td></tr>
         <tr><th>Peran</th><td><span class="badge badge-kuning"><?= e(label_peran($pengguna['peran'])) ?></span></td></tr>
         <tr><th>Status</th><td>Aktif</td></tr>
         <?php if ($siswa !== null): ?>
