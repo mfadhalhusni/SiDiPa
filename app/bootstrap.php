@@ -18,6 +18,7 @@ require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/skor.php';
 require_once __DIR__ . '/laporan.php';
+require_once __DIR__ . '/xlsx.php';
 require_once __DIR__ . '/sertifikat.php';
 require_once __DIR__ . '/wa.php';
 require_once __DIR__ . '/ikon.php';

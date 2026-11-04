@@ -74,6 +74,13 @@ $didalamFrame = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '')) ===
         <label for="kata_sandi">Kata sandi</label>
         <input class="input" id="kata_sandi" name="kata_sandi" type="password" required autocomplete="current-password">
       </div>
+      <div class="form-baris lebar-penuh">
+        <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-weight:600">
+          <input type="checkbox" name="jangan_ingat" value="1" style="width:20px;height:20px;min-height:0;margin-top:2px">
+          <span>Jangan simpan login di perangkat ini</span>
+        </label>
+        <p class="bantuan">Login tersimpan otomatis selama <?= (int) SIDIPA_INGAT_HARI ?> hari di HP/PC ini, jadi cukup masuk sekali. Centang kotak di atas bila memakai perangkat bersama.</p>
+      </div>
       <div class="form-aksi">
         <button class="tombol tombol-utama tombol-penuh" type="submit">Masuk <?= ikon('masuk', 20) ?></button>
       </div>

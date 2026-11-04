@@ -64,8 +64,8 @@ halaman_atas('Dashboard Kepala Sekolah', 'Laporan hanya baca', ['nav' => 'berand
 <section class="kartu margin-bawah">
   <p class="label-kecil">Laporan</p>
   <div class="daftar-tautan">
-    <a href="<?= e(url('pages/umum/laporan.php')) ?>"><?= ikon('grafik', 22) ?> Laporan per kelas dan per aspek + CSV</a>
-    <a href="<?= e(url('pages/umum/rekap_kehadiran.php')) ?>"><?= ikon('rekap', 22) ?> Rekap kehadiran + CSV</a>
+    <a href="<?= e(url('pages/umum/laporan.php')) ?>"><?= ikon('grafik', 22) ?> Laporan per kelas dan per aspek + XLSX</a>
+    <a href="<?= e(url('pages/umum/rekap_kehadiran.php')) ?>"><?= ikon('rekap', 22) ?> Rekap kehadiran + XLSX</a>
     <a href="<?= e(url('pages/umum/rekap.php')) ?>"><?= ikon('bintang', 22) ?> Rekap skor & siswa teladan</a>
   </div>
 </section>

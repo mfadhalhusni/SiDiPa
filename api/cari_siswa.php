@@ -35,13 +35,6 @@ if ($peran === 'siswa' || $peran === 'wali') {
     }
     $syarat[] = 's.id = ?';
     $param[] = (int) $sendiri['id'];
-} elseif ($peran === 'guru') {
-    $idKelas = id_kelas_guru((int) $pengguna['id']);
-    if ($idKelas === []) {
-        json_keluar(['ok' => true, 'siswa' => [], 'pesan' => 'Anda belum ditetapkan sebagai guru pengampu kelas.']);
-    }
-    $syarat[] = 's.kelas_id IN (' . implode(', ', array_fill(0, count($idKelas), '?')) . ')';
-    $param = array_merge($param, $idKelas);
 } elseif (!in_array($peran, ['admin', 'bk', 'kepsek'], true)) {
     json_keluar(['ok' => false, 'pesan' => 'Peran tidak diizinkan.'], 403);
 }

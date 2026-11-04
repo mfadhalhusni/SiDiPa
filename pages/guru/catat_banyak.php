@@ -6,7 +6,7 @@ declare(strict_types=1);
  | Satu kejadian katalog, satu tanggal, satu deskripsi, banyak siswa.
  | Semua penyisipan berada dalam SATU transaksi: bila satu siswa gagal
  | (misal melampaui cap harian), tidak ada catatan yang tersimpan.
- | Hanya siswa dari kelas yang diampu guru yang boleh dipilih.
+ | Semua siswa aktif boleh dipilih tanpa penugasan kelas.
  */
 
 require_once __DIR__ . '/../../app/bootstrap.php';
@@ -16,21 +16,9 @@ cek_input_semester();
 $idGuru = (int) $pengguna['id'];
 $semester = semester_wajib();
 $semesterId = (int) $semester['id'];
-$idKelas = id_kelas_guru($idGuru);
 $batasHarian = (int) pengaturan('batas_pengurangan_harian', '10');
 $pesanGalat = '';
-
-$siswa = [];
-if ($idKelas !== []) {
-    $tanda = implode(', ', array_fill(0, count($idKelas), '?'));
-    $siswa = db_semua(
-        'SELECT s.id, s.nis, s.nama, COALESCE(k.nama, \'-\') AS kelas FROM siswa s
-         LEFT JOIN kelas k ON k.id = s.kelas_id
-         WHERE s.aktif = 1 AND s.kelas_id IN (' . $tanda . ')
-         ORDER BY k.nama, s.nama LIMIT 300',
-        $idKelas
-    );
-}
+$siswa = daftar_siswa_untuk_guru();
 $katalog = db_semua(
     'SELECT kp.id, kp.kode, kp.nama, kp.poin, kp.tingkat, kp.wajib_keterangan,
             a.id AS aspek_id, a.nama AS aspek
@@ -144,7 +132,7 @@ halaman_atas('Catat banyak siswa', 'Satu kejadian / banyak siswa', [
 
 <?php if ($siswa === [] || $katalog === []): ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-    <span><?= $siswa === [] ? 'Anda belum ditetapkan sebagai guru pengampu kelas.' : 'Katalog poin manual belum tersedia.' ?> Minta admin melengkapi data.</span></div>
+    <span><?= $siswa === [] ? 'Belum ada siswa aktif.' : 'Katalog poin manual belum tersedia.' ?> Minta admin melengkapi data.</span></div>
 <?php else: ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
     <span>Pilih beberapa siswa, lalu satu kejadian. Batas pengurangan <strong><?= e($batasHarian) ?> poin per aspek per siswa per hari</strong> tetap berlaku; bila ada siswa yang melampauinya, seluruh penyimpanan dibatalkan.</span></div>

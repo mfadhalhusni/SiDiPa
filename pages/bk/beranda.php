@@ -50,7 +50,7 @@ halaman_atas('Dashboard BK', 'Bimbingan dan konseling', [
     <a href="<?= e(url('pages/bk/tindak_lanjut.php')) ?>"><?= ikon('catatan', 22) ?> Tindak lanjut pembinaan</a>
     <a href="<?= e(url('pages/guru/pembinaan.php')) ?>"><?= ikon('pembinaan', 22) ?> Siswa pembinaan</a>
     <a href="<?= e(url('pages/umum/laporan.php')) ?>"><?= ikon('grafik', 22) ?> Laporan per kelas dan aspek</a>
-    <a href="<?= e(url('pages/umum/rekap_kehadiran.php')) ?>"><?= ikon('rekap', 22) ?> Rekap kehadiran + CSV</a>
+    <a href="<?= e(url('pages/umum/rekap_kehadiran.php')) ?>"><?= ikon('rekap', 22) ?> Rekap kehadiran + XLSX</a>
   </div>
 </section>
 

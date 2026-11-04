@@ -134,7 +134,7 @@ halaman_atas('Kelas dan wali kelas', 'Admin / Data master', ['nav' => 'siswa']);
             <option value="<?= e($g['id']) ?>" <?= in_array((int) $g['id'], $form['guru_ids'], true) ? 'selected' : '' ?>><?= e($g['nama']) ?></option>
           <?php endforeach; ?>
         </select>
-        <p class="bantuan">Tahan Ctrl / Command untuk memilih beberapa guru. Guru hanya bisa membaca rekap kelas yang diampu.</p></div>
+        <p class="bantuan">Tahan Ctrl / Command untuk memilih beberapa guru. Penugasan bersifat opsional: semua guru kini dapat menilai seluruh siswa aktif.</p></div>
       <div class="form-baris lebar-penuh pilihan-baris">
         <input type="checkbox" id="aktif" name="aktif" value="1" <?= (int) $form['aktif'] === 1 ? 'checked' : '' ?>>
         <label for="aktif" style="text-transform:none;letter-spacing:0;font-size:.9rem">Kelas aktif</label>

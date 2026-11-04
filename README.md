@@ -2,7 +2,7 @@
 
 Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan sertifikat digital untuk satu SMK. Dibuat untuk **shared hosting cPanel**: PHP 8.1+ tanpa framework, MySQL/MariaDB lewat PDO, HTML/CSS/JavaScript vanilla tanpa build step, tanpa Composer. Seluruh antarmuka berbahasa Indonesia dan bergaya **neo brutalism** buatan sendiri.
 
-> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh** dan pustaka QR lokal untuk cetak/scan tanpa CDN. Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
+> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), dan semua laporan diunduh sebagai **XLSX** (lihat bagian 15). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
 
 ---
 
@@ -11,8 +11,8 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | Bagian | Isi |
 | --- | --- |
 | Struktur | `index.php`, `config.php`, `database.sql`, `install.php`, `verifikasi.php`, `app/`, `pages/`, `api/`, `cron/`, `public/`, `contoh/` |
-| Database | 21 tabel InnoDB utf8mb4 + kunci asing + indeks; 6 aspek, 36 katalog poin bawaan, 2 jenis ibadah, 52 pengaturan, 1 semester contoh, akun admin |
-| Login & peran | `password_hash`/`password_verify`, regenerasi ID sesi, cookie `HttpOnly` + `SameSite=Lax` + `secure` otomatis, pembatasan 5 percobaan gagal / 15 menit, wajib ganti kata sandi saat login pertama, pemeriksaan peran di server |
+| Database | 22 tabel InnoDB utf8mb4 + kunci asing + indeks (termasuk `ingat_login`); 6 aspek, 36 katalog poin bawaan, 2 jenis ibadah, 52 pengaturan, 1 semester contoh, akun admin |
+| Login & peran | `password_hash`/`password_verify`, regenerasi ID sesi, cookie `HttpOnly` + `SameSite=Lax` + `secure` otomatis, **login sekali tersimpan 30 hari** (cookie `SIDIPAINGAT`, hanya hash token di DB, rotasi tiap pakai, dicabut saat logout/ganti sandi), opsi **Jangan simpan login di perangkat ini**, pembatasan 5 percobaan gagal / 15 menit, wajib ganti kata sandi saat login pertama, pemeriksaan peran di server |
 | Data master | CRUD siswa + akun siswa otomatis, CRUD kelas + wali kelas + guru pengampu, CRUD pengguna, CRUD katalog poin, impor CSV dengan pratinjau |
 | Pengaturan | Semua jam, bobot poin otomatis, target aspek, ambang predikat/pembinaan, poin penilaian bulanan, identitas sekolah, tanda tangan, dan konfigurasi WA lewat satu halaman admin |
 | Skor | `skor_per_aspek()` mulai dari 0 per semester, tanpa batas atas, boleh minus; predikat **per aspek** (A+/A/B/C/D/E) terhadap target aspek |
@@ -22,7 +22,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | Verifikasi publik | `verifikasi.php?kode=...` tanpa login, hanya status, nama, kelas, semester, dan skor per aspek; admin yang login mendapat form pembatalan beralasan |
 | Contoh data | `contoh/siswa_contoh.csv` dan `contoh/data_contoh.sql` (3 kelas, 20 siswa fiktif, 3 guru) |
 | PWA | `manifest.webmanifest`, `sw.js`, `offline.html`, `public/js/pwa.js`, 5 ikon PNG, tombol Pasang, badge Offline, `.htaccess` (lihat bagian 12) |
-| **Tahap 2 — Beranda guru** | `pages/guru/beranda.php` persis bagian 3: avatar ungu, sapaan, lonceng, **satu** stiker kuning −1,5° `SELASA, 3 NOV 2026`, kartu CATAT POIN koral ±150 px, enam kartu ±118 px grid 2 kolom, tanpa strip kalender/banner kehadiran. Wali kelas mendapat tambahan Izin dan Sakit + Penilaian Bulanan serta kartu Banding; guru biasa mendapat Catatan Saya |
+| **Tahap 2 — Beranda guru** | `pages/guru/beranda.php` persis bagian 3: avatar ungu, sapaan, lonceng, **satu** stiker kuning −1,5° `SELASA, 3 NOV 2026`, kartu CATAT POIN koral ±150 px, enam kartu ±118 px grid 2 kolom, tanpa strip kalender/banner kehadiran. Kini **semua guru** mendapat kartu Banding, Izin dan Sakit, Penilaian Bulanan, dan Catatan Saya dengan cakupan **seluruh siswa aktif**, tanpa perlu ditugaskan sebagai pengampu/wali kelas (bagian 15) |
 | **Tahap 2 — Catat poin** | `pages/guru/catat_poin.php`: katalog manual, deskripsi wajib untuk sedang/berat, cap pengurangan 10/aspek/hari, unggah bukti JPG/PNG/WEBP ≤2 MB nama acak, notifikasi pelanggaran berat ke BK/kepsek/wali kelas, evaluasi ambang pembinaan |
 | **Tahap 2 — Riwayat & privasi** | `pages/guru/riwayat.php` (pembatalan mandiri ≤24 jam dengan alasan, catatan tidak dihapus), `pages/siswa/beranda.php`, `pages/siswa/riwayat.php` (hanya kategori, tanggal tanpa jam, poin, deskripsi; tanpa pencatat) |
 | **Tautan kartu lain** | `pages/guru/scan.php` + `api/scan.php` (QR berkelanjutan, fallback NIS, waktu server, jendela ibadah, tolak duplikat), `pages/guru/pembinaan.php`, `pages/guru/izin.php`, `pages/guru/penilaian.php`, `pages/guru/banding.php`, `pages/siswa/banding.php` |
@@ -30,12 +30,13 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | **Grafik mingguan siswa (§10)** | `grafik_mingguan_siswa()` di `app/laporan.php` + SVG inline pada `pages/siswa/beranda.php`: akumulasi poin 8 minggu terakhir, tanpa pustaka grafik eksternal |
 | **Tahap 3 — Kartu QR** | `pages/admin/kartu.php` dan `pages/siswa/kartu.php`: kartu **85,6 × 54 mm** memuat nama, NIS, kelas, dan QR berisi `qr_token` (bukan NIS). Cetak per kelas atau per siswa lewat `window.print()`. Token dapat dibuat ulang di Data siswa |
 | **Tahap 3 — Hari libur** | `pages/admin/hari_libur.php`: tambah satu tanggal atau rentang (maks. 93 hari), ubah keterangan, hapus. `cron/harian.php`, `cron/mingguan.php`, dan `api/scan.php` melewati tanggal ini |
-| **Tahap 3 — Rekap kehadiran** | `app/laporan.php` + `pages/umum/rekap_kehadiran.php`: harian, bulanan, dan semester per siswa **dan** per kelas (hadir, hadir awal, terlambat, izin, sakit, alpa, % kehadiran) dengan **ekspor CSV** ber-BOM. Hak akses di server: siswa/wali hanya anaknya, guru hanya kelas yang diampu |
+| **Tahap 3 — Rekap kehadiran** | `app/laporan.php` + `pages/umum/rekap_kehadiran.php`: harian, bulanan, dan semester per siswa **dan** per kelas (hadir, hadir awal, terlambat, izin, sakit, alpa, % kehadiran) dengan **unduh XLSX** 3 lembar (Rekap Siswa, Ringkasan Kelas, Keterangan). Hak akses di server: siswa/wali hanya anaknya, guru menjangkau seluruh siswa aktif |
 | **Tahap 4 — Semester** | `pages/admin/sertifikat.php`: tambah semester, aktifkan (skor kembali 0), **tutup periode input**, buka kembali. `cek_input_semester()` membekukan catat poin, scan, izin, dan penilaian bulanan saat periode tertutup |
 | **Tahap 4 — Sertifikat** | Penerbitan per kelas/semua, kode **`SDP-TAHUNSEM-NIS-ACAK4`**, snapshot `data_json` yang tidak berubah, antrean WA, pembatalan dengan alasan + pelaku + waktu, `pages/umum/cetak_sertifikat.php` (**A4 landscape**, tabel 6 aspek, logo, tanda tangan, QR verifikasi). Tombol cetak siswa hanya aktif saat status `terbit`. `verifikasi.php` kini menyediakan pembatalan khusus admin |
-| **Tahap 4 — BK & kepsek** | `pages/bk/beranda.php`, `pages/kepsek/beranda.php` (**hanya baca**), `pages/bk/tindak_lanjut.php` (tindak lanjut + poin positif opsional), `pages/umum/laporan.php` (ringkasan per kelas/per aspek + CSV) |
+| **Tahap 4 — BK & kepsek** | `pages/bk/beranda.php`, `pages/kepsek/beranda.php` (**hanya baca**), `pages/bk/tindak_lanjut.php` (tindak lanjut + poin positif opsional), `pages/umum/laporan.php` (ringkasan per kelas/per aspek + unduh XLSX 3 lembar) |
 | **Tahap 5 — Portal wali** | `pages/wali/beranda.php`: hanya baca ringkasan anaknya (skor 6 aspek, kehadiran bulan ini, sertifikat, kartu QR). Admin menghubungkan akun lewat **Data siswa → Akun portal wali murid** |
 | **Pustaka QR lokal** | `public/js/qrcode.min.js` (qrcode-generator, MIT), `public/js/html5-qrcode.min.js` (Apache-2.0), `public/js/qr-sidipa.js`. Disertakan sebagai berkas statis, di-precache service worker, sehingga cetak dan scan tetap berfungsi tanpa akses CDN |
+| **Ekspor XLSX murni PHP** | `app/xlsx.php` menulis OOXML/ZIP sendiri (tanpa Composer, tanpa `ZipArchive`): header tebal + beku, filter, lebar kolom, banyak lembar, angka sebagai sel numerik. `csv_keluar()` sudah dihapus; tidak ada lagi unduhan CSV pada laporan |
 
 **Status akhir:** kelima tahap PDF terlaksana. Tidak ada placeholder, halaman "coming soon", atau tombol mati. Dua hal yang memang menjadi kewajiban sekolah saat deploy: menyesuaikan array `$payload`/endpoint OpenWA di `app/wa.php` (bagian 11 PDF) dan **menghapus `install.php`** setelah pemeriksaan server hijau.
 
@@ -53,14 +54,14 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 ## 3. Instalasi di cPanel
 
 1. **Buat database**: cPanel → *MySQL Databases* → buat database dan user, berikan *ALL PRIVILEGES*. Catat nama database, user, dan kata sandi.
-2. **Impor skema**: phpMyAdmin → pilih database → *Import* → unggah `database.sql`. Berkas ini membuat seluruh tabel dan mengisi data awal.
+2. **Impor skema**: phpMyAdmin → pilih database → *Import* → unggah `database.sql`. Berkas ini membuat seluruh tabel (termasuk `ingat_login` untuk login persisten) dan mengisi data awal. **Instalasi lama**: jalankan perintah SQL pada **bagian 15** untuk menambah tabel `ingat_login` tanpa mengubah data yang ada.
 3. **(Opsional) Data contoh**: impor `contoh/data_contoh.sql` untuk 3 kelas dan 20 siswa fiktif. Lewati bila langsung memakai data asli.
 4. **Unggah berkas**: unggah seluruh isi repositori ke `public_html/sidipa/` (atau sesuaikan), **termasuk berkas tersembunyi** `.htaccess`, `manifest.webmanifest`, `sw.js`, dan `offline.html` di root. Pertahankan struktur folder; jangan letakkan `app/`, `cron/`, atau `storage/` di dalam folder yang bisa dieksekusi bebas.
 5. **Isi `config.php`**: sunting `SIDIPA_DB_HOST`, `SIDIPA_DB_NAME`, `SIDIPA_DB_USER`, `SIDIPA_DB_PASS`. Jika aplikasi di subdirektori/domain khusus, isi `SIDIPA_BASE_URL` (mis. `https://sidipa.smk.sch.id`). Ganti `SIDIPA_KUNCI` dengan nilai acak baru bila perlu. Alternatif: pakai environment variable `SIDIPA_DB_*` lewat `.htaccess` cPanel.
 6. **Hak akses folder**: `public/uploads` → 755 dan dapat ditulis; `storage/logs` → 750 dan dapat ditulis. `public/uploads/.htaccess` sudah melarang eksekusi PHP; `storage/.htaccess` dan `cron/.htaccess` sudah menolak akses browser.
 7. **Aktifkan HTTPS**: cPanel → *AutoSSL* / *SSL/TLS Status*, lalu arahkan semua traffic ke HTTPS. HTTPS wajib untuk service worker, kamera pemindai QR, dan tombol pasang PWA (lihat bagian 12).
 8. **Jalankan `install.php`** dari browser. Periksa setiap baris pemeriksaan. Setelah semua hijau, **HAPUS `install.php`** dari File Manager.
-9. **Login pertama**: `https://domain/sidipa/pages/login.php` → user `admin`, kata sandi sementara **`SiDiPa@2026`**. Sistem memaksa penggantian kata sandi sebelum masuk ke menu lain.
+9. **Login pertama**: `https://domain/sidipa/pages/login.php` → user `admin`, kata sandi sementara **`SiDiPa@2026`**. Sistem memaksa penggantian kata sandi sebelum masuk ke menu lain. Setelah itu login tersimpan 30 hari di perangkat; centang **Jangan simpan login di perangkat ini** bila memakai komputer bersama.
 10. **Isi data sekolah** di menu *Pengaturan* (nama sekolah, logo, tanda tangan), lalu tambah kelas, guru, dan siswa (manual atau impor CSV). Untuk portal wali: buat akun berperan **Wali murid** di menu *Pengguna*, lalu pilih akun itu pada kolom **Akun portal wali murid** di form *Data siswa*.
 11. **Alur akhir semester**: *Semester & Sertifikat* → **Tutup** periode input → periksa ringkasan → **Terbitkan sertifikat** (per kelas atau semua) → siswa mencetak lewat *Sertifikat Saya*. Kode sertifikat dapat diverifikasi publik tanpa login.
 
@@ -135,11 +136,12 @@ sidipa/
 ├── app/
 │   ├── bootstrap.php         # Muat konfigurasi, sesi, penangan galat
 │   ├── db.php                # PDO + prepared statements + transaksi
-│   ├── auth.php              # Login, peran, throttle, ganti kata sandi
+│   ├── auth.php              # Login, login persisten, peran, throttle, ganti sandi
 │   ├── csrf.php              # Token CSRF untuk form dan API
 │   ├── helpers.php           # Escape, URL, flash, pengaturan, tanggal
 │   ├── skor.php              # Skor per aspek, predikat, kerahasiaan pencatat
-│   ├── laporan.php           # Rekap kehadiran, CSV, ringkasan per kelas
+│   ├── laporan.php           # Rekap kehadiran, ringkasan per kelas, grafik mingguan
+│   ├── xlsx.php              # Penulis XLSX/OOXML murni PHP (tanpa Composer)
 │   ├── sertifikat.php        # Penutupan periode, snapshot, terbit/batal sertifikat
 │   ├── wa.php                # WaClient adapter OpenWA + antrean
 │   ├── ikon.php              # Pustaka SVG inline (tanpa emoji)
@@ -175,10 +177,10 @@ sidipa/
 
 ## 8. Keamanan
 
-- `password_hash` / `password_verify`, regenerasi ID sesi saat login, cookie `HttpOnly` + `SameSite=Lax`, blokir 5 percobaan gagal / 15 menit.
+- `password_hash` / `password_verify`, regenerasi ID sesi saat login, cookie `HttpOnly` + `SameSite=Lax`, blokir 5 percobaan gagal / 15 menit. Cookie `SIDIPAINGAT` juga `HttpOnly` dan `Secure` saat HTTPS; token mentah tidak pernah disimpan (hanya SHA-256), diputar setiap dipakai, kedaluwarsa 30 hari, dan dicabut saat logout atau ganti kata sandi.
 - Token CSRF pada **semua** form dan permintaan POST, termasuk endpoint API (`X-CSRF-Token` atau `csrf_token`).
 - Semua output melalui `e()` (`htmlspecialchars`), semua query memakai prepared statements, nama tabel/kolom divalidasi sebelum disisipkan.
-- Pemeriksaan peran di server pada setiap halaman dan endpoint; siswa hanya membaca datanya sendiri, guru hanya kelas yang diampu.
+- Pemeriksaan peran di server pada setiap halaman dan endpoint tetap dipertahankan; siswa hanya membaca datanya sendiri. **Kebijakan baru:** guru dapat menilai seluruh siswa aktif tanpa penugasan `guru_kelas`; siswa/wali murid tetap dibatasi pada anaknya.
 - Unggah bukti gambar JPG/PNG/WebP maksimal 2 MB dengan nama acak; `public/uploads/.htaccess` mematikan eksekusi PHP.
 - Transaksi DB untuk operasi multi-tabel; galat dicatat ke `storage/logs/sidipa.log` di luar folder publik.
 - `log_akses` mencatat login, perubahan data, pembatalan, cron, dan **setiap** pembukaan identitas pencatat oleh admin.
@@ -210,19 +212,19 @@ Pesan **tidak dikirim saat scan**; scan memasukkan baris ke `notifikasi_wa` deng
 - [x] Scan 06.45 awal / 06.55 hadir / 07.05 −2, duplikat ditolak, izin-sakit netral, jendela ibadah — `api/scan.php`
 - [x] PWA terpasang di semua halaman; halaman PHP/API tidak pernah di-cache — `sw.js`, `pwa_meta()`
 - [x] Layout 360–430 px, CSRF, dan prepared statements di seluruh halaman yang ada
-- [x] Cookie sesi `Path` selalu berupa path (bug URL penuh diperbaiki), `SameSite`/`Partitioned` dapat dikonfigurasi untuk preview lintas-situs, dan login pulih otomatis saat token kedaluwarsa — lihat **bagian 14**
+- [x] Cookie sesi `Path` selalu berupa path (bug URL penuh diperbaiki), `SameSite`/`Partitioned` dapat dikonfigurasi untuk preview lintas-situs, login pulih otomatis saat token CSRF kedaluwarsa (**bagian 14**), dan **login persisten 30 hari** dengan rotasi token (**bagian 15**)
 - [x] Kartu siswa 85,6 × 54 mm berisi `qr_token`, cetak per kelas dan per siswa — `pages/admin/kartu.php`, `pages/siswa/kartu.php`
 - [x] Hari libur dikelola admin dan dilewati cron/scan — `pages/admin/hari_libur.php`
-- [x] Rekap kehadiran harian/bulanan/semester per siswa dan per kelas + ekspor CSV — `app/laporan.php`
+- [x] Rekap kehadiran harian/bulanan/semester per siswa dan per kelas + unduh XLSX — `app/laporan.php`, `app/xlsx.php`
 - [x] Admin menutup periode input; catat poin, scan, izin, dan penilaian bulanan dibekukan — `cek_input_semester()`
 - [x] Sertifikat hanya dapat dicetak setelah `terbit`; kode `SDP-...`, snapshot JSON, QR verifikasi, tanda tangan, A4 landscape — `pages/umum/cetak_sertifikat.php`
 - [x] Admin membatalkan sertifikat (dari menu admin maupun verifikasi publik) dengan alasan, pelaku, dan waktu; verifikasi publik berubah menjadi "dibatalkan"
-- [x] Dashboard BK & kepala sekolah (kepsek hanya baca), laporan per kelas/aspek + CSV, tindak lanjut dengan poin positif opsional
+- [x] Dashboard BK & kepala sekolah (kepsek hanya baca), laporan per kelas/aspek + XLSX, tindak lanjut dengan poin positif opsional
 - [x] Portal wali murid hanya menampilkan ringkasan anaknya; pencatat dan riwayat pelanggaran tidak pernah terkirim
 - [x] QR dibuat dan dipindai tanpa CDN, tersedia offline lewat service worker — `public/js/qr*.js`
 - [x] Mode **catat banyak siswa sekaligus untuk satu kejadian** (§10) dengan cap harian per siswa dan transaksi all-or-nothing — `pages/guru/catat_banyak.php`
 - [x] Dashboard siswa memuat **grafik perkembangan mingguan** SVG inline 8 minggu (§10), hanya angka agregat tanpa nama pencatat
-- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan lulus pada preview PHP 8.3 + MySQL 5.7
+- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan + **46/46** uji tiga pembaruan = **202/202** lulus pada preview PHP 8.3 + MySQL 5.7
 
 ---
 
@@ -235,7 +237,7 @@ Keputusan desain yang perlu diketahui saat merawat sistem:
 - `semester_aktif()` memprioritaskan semester `aktif = 1 AND status = 'berjalan'`; bila admin menutup periode, fungsi ini jatuh ke semester terbaru untuk keperluan **laporan saja**. Penulisan poin/kehadiran dicek terpisah lewat `semester_input_terbuka()`.
 - Sertifikat yang dibatalkan tidak dihapus. `alasan_batal`, `dibatalkan_oleh`, `dibatalkan_pada` tersimpan di tabel `sertifikat`, dan `data_json` tetap utuh sebagai snapshot.
 - Penerbitan ulang setelah pembatalan mengganti kode dan snapshot lama, bukan menimpa sebagian, sehingga satu siswa tetap punya paling banyak satu sertifikat per semester (`uq_sertifikat_siswa_semester`).
-- `rekap_kehadiran()` hanya mengambil kolom agregat; tidak ada `pencatat_id`, `qr_token`, atau nomor WhatsApp dalam hasil maupun CSV.
+- `rekap_kehadiran()` hanya mengambil kolom agregat; tidak ada `pencatat_id`, `qr_token`, atau nomor WhatsApp dalam hasil maupun berkas XLSX. Impor data master siswa masih memakai CSV (`contoh/siswa_contoh.csv`) — itu **bukan** laporan.
 - Portal wali mengandalkan `siswa.wali_pengguna_id`. Akun wali tanpa tautan tidak melihat data siswa mana pun (bukan menampilkan semua siswa).
 
 ---
@@ -289,7 +291,7 @@ Semua URL PWA relatif terhadap lokasi aplikasi: manifest memakai `scope: "./"`, 
 | Cetak kartu QR siswa | **Admin → Cetak Kartu QR** → pilih kelas → **Cetak / Simpan PDF** (kertas 85,6 × 54 mm, skala 100%). Siswa juga dapat mencetak kartunya sendiri lewat **Kartu QR saya** |
 | Kartu hilang | **Admin → Data siswa** → tombol **QR** pada baris siswa → token lama langsung tidak berlaku → cetak ulang kartu |
 | Tandai libur sekolah | **Admin → Hari Libur** → isi tanggal/rentang + keterangan. Cron harian/mingguan dan scan melewati tanggal tersebut |
-| Rekap kehadiran | **Rekap Kehadiran** → pilih Harian / Bulanan / Semester, kelas (bila berhak), lalu **Ekspor CSV** |
+| Rekap kehadiran | **Rekap Kehadiran** → pilih Harian / Bulanan / Semester, kelas (bila berhak), lalu **Unduh XLSX** |
 | Akhir semester | **Admin → Semester & Sertifikat** → **Tutup** semester berjalan (input poin/scan/izin/penilaian langsung dibekukan) → **Terbitkan sertifikat** per kelas atau semua |
 | Cetak sertifikat | Siswa: **Sertifikat saya → Cetak** (A4 landscape). Admin/BK/kepsek: tautan **Cetak** pada daftar sertifikat. Wali murid: tautan cetak pada beranda portal |
 | Verifikasi eksternal | Pindai QR di sertifikat atau buka `verifikasi.php?kode=...`; tanpa login, hanya status + identitas + skor per aspek |
@@ -298,7 +300,7 @@ Semua URL PWA relatif terhadap lokasi aplikasi: manifest memakai `scope: "./"`, 
 | Pendampingan BK | **BK → Tindak Lanjut**: pilih siswa, isi pemicu/tindakan/status; centang poin positif bila ada kegiatan perbaikan |
 | Wali murid | Buat akun peran **Wali murid** di *Pengguna*, tautkan di *Data siswa*. Portal hanya menampilkan ringkasan anaknya |
 
-**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **62 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor CSV, tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **156 pemeriksaan fungsional lulus (126 + 13 + 17)**.
+**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **63 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **202 pemeriksaan fungsional lulus (126 + 13 + 17 + 46)**.
 
 ---
 
@@ -326,3 +328,55 @@ define('SIDIPA_COOKIE_PARTISI', (bool) (getenv('SIDIPA_COOKIE_PARTISI') ?: false
 Untuk produksi di hosting biasa (tab langsung, HTTPS) biarkan default `Lax` — paling aman dan tidak memerlukan `Partitioned`. Untuk preview yang disematkan, `sinkron.py` menetapkan `None` + `Partitioned` secara otomatis pada salinan `.preview/www` saja; berkas sumber tidak berubah. Atribut `Partitioned` diterapkan lewat `auth_pasang_cookie()` karena `session_set_cookie_params()` PHP 8.3 belum mendukungnya.
 
 Catatan: di preview, paksaan ganti kata sandi pertama dimatikan agar akun contoh dapat langsung dicoba. Data `contoh/data_contoh.sql` yang dipakai saat instalasi tetap menetapkan `wajib_ganti_password = 1` sesuai spesifikasi.
+
+
+---
+
+## 15. Pembaruan: cakupan guru, login sekali, dan XLSX
+
+Tiga perubahan perilaku yang sengaja menggantikan aturan lama:
+
+### 15.1 Guru menilai seluruh siswa aktif
+
+Sebelumnya `guru_kelas` dan `kelas.wali_kelas_id` membatasi daftar siswa. Sekarang **semua guru** dapat mencatat poin (tunggal maupun banyak siswa), memindai QR, mencatat izin/sakit, mengisi penilaian bulanan, memutus banding, melihat pembinaan, dan membuka rekap untuk **siswa aktif mana pun** tanpa penugasan. Pengaturan guru pengampu/wali kelas tetap ada di data master untuk keperluan administrasi, tetapi tidak lagi dipakai sebagai gerbang akses.
+
+Implementasi: `daftar_siswa_untuk_guru()` dan `guru_boleh_siswa()` di `app/helpers.php` memakai `id_kelas_semua()`; semua halaman `pages/guru/*`, `api/scan.php`, `api/cari_siswa.php`, `pages/umum/{rekap,siswa,rekap_kehadiran}.php`, dan `pages/admin/kelas.php` mengikuti helper itu. **Yang tidak berubah:** `auth_wajib()` / pemeriksaan peran, token CSRF, serta pembatasan siswa dan wali murid hanya pada data anaknya.
+
+### 15.2 Cukup login sekali (30 hari)
+
+- Login **otomatis** menyimpan cookie sesi `SIDIPASES` dan cookie `SIDIPAINGAT` selama **30 hari** di memori HP/PC. Tidak perlu mencentang apa pun.
+- Bila sesi PHP hilang (browser ditutup, server restart), `auth_pengguna()` memulihkan login dari `SIDIPAINGAT` tanpa menampilkan halaman login.
+- Form login menyediakan **Jangan simpan login di perangkat ini** (`jangan_ingat`) untuk komputer bersama; pilihannya disimpan di sesi sehingga request berikutnya tidak mengubah cookie menjadi persisten.
+- **Logout** menghapus kedua cookie dan mencabut token. **Ganti kata sandi** mencabut semua perangkat lain, lalu memberi token baru hanya pada perangkat yang sedang dipakai.
+- Durasi dapat diubah lewat `SIDIPA_INGAT_HARI` di `config.php` / environment (`SIDIPA_INGAT_HARI=7`).
+- Cookie `SIDIPAINGAT` bertanda `HttpOnly`, `SameSite` mengikuti `SIDIPA_SAMESITE`, `Secure` + `Partitioned` saat HTTPS/iframe (lihat bagian 14).
+
+**Migrasi untuk instalasi yang sudah berjalan.** Impor ulang `database.sql` aman (semua `CREATE TABLE IF NOT EXISTS`), atau jalankan SQL berikut sekali di phpMyAdmin:
+
+```sql
+CREATE TABLE IF NOT EXISTS ingat_login (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  pengguna_id INT UNSIGNED NOT NULL,
+  token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  dibuat_pada DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  kedaluwarsa DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_ingat_token (token_hash),
+  KEY idx_ingat_pengguna (pengguna_id),
+  KEY idx_ingat_kedaluwarsa (kedaluwarsa),
+  CONSTRAINT fk_ingat_pengguna FOREIGN KEY (pengguna_id) REFERENCES pengguna (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+`install.php` kini memeriksa keberadaan tabel ini. Tanpa tabel, login tetap berfungsi normal tetapi **tidak** bertahan 30 hari (galat dicatat diam-diam ke `storage/logs/sidipa.log`).
+
+### 15.3 Semua laporan berformat XLSX
+
+`csv_keluar()` dihapus. `app/xlsx.php` menulis berkas OOXML/ZIP sendiri memakai PHP murni (`crc32()` bawaan PHP, metode ZIP STORE), **tanpa Composer dan tanpa ekstensi `ZipArchive`**, jadi tetap jalan di shared hosting cPanel. Fitur: sel `inlineStr` aman terhadap rumus/injeksi CSV, header tebal + baris beku, `autoFilter`, lebar kolom, angka sebagai sel numerik, dan beberapa lembar kerja.
+
+| Laporan | Tombol | Isi berkas |
+| --- | --- | --- |
+| `pages/umum/rekap_kehadiran.php` | **Unduh XLSX** | `Rekap Siswa`, `Ringkasan Kelas`, `Keterangan` |
+| `pages/umum/laporan.php` | **Unduh XLSX (skor + ringkasan)** | `Skor per Siswa`, `Ringkasan per Kelas`, `Keterangan` |
+
+Log aktivitas memakai `ekspor_xlsx_kehadiran` / `ekspor_xlsx_laporan`. Berkas diuji dengan `openpyxl`: ZIP valid, nama lembar sesuai, 20 baris siswa, dan kolom angka terbaca sebagai angka. **Impor data master siswa tetap CSV** (`contoh/siswa_contoh.csv`, menu *Impor CSV*) karena itu berkas masukan, bukan laporan.

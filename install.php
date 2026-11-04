@@ -42,6 +42,18 @@ try {
     if ($tabelOk) {
         $jumlahAspek = (int) db_nilai('SELECT COUNT(*) FROM aspek', [], 0);
         tambah_cek('Data awal', $jumlahAspek === 6, 'Jumlah aspek: ' . $jumlahAspek . ' (harus 6).');
+        $ingatAda = (int) db_nilai(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'ingat_login'",
+            [],
+            0
+        );
+        tambah_cek(
+            'Tabel ingat_login (login 30 hari)',
+            $ingatAda > 0,
+            $ingatAda > 0
+                ? 'Cookie "ingat saya" siap dipakai.'
+                : 'Belum ada. Jalankan CREATE TABLE ingat_login dari bagian 15 README agar login tersimpan 30 hari.'
+        );
     }
 } catch (Throwable $galat) {
     tambah_cek('Koneksi database', false, 'Gagal: ' . $galat->getMessage());

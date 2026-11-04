@@ -14,7 +14,7 @@ $ambang = (float) pengaturan('ambang_pembinaan_persen', '60');
 $pesanGalat = '';
 
 if ($peran === 'guru') {
-    $idKelas = id_kelas_guru($idPengguna);
+    $idKelas = id_kelas_semua();
 } else {
     $idKelas = array_map('intval', array_column(db_semua('SELECT id FROM kelas WHERE aktif = 1'), 'id'));
 }

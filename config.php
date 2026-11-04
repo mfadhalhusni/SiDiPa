@@ -39,6 +39,11 @@ define('SIDIPA_SAMESITE', getenv('SIDIPA_SAMESITE') ?: 'Lax');
 // cookie sesi tetap tersimpan di dalam iframe. Abaikan pada produksi.
 define('SIDIPA_COOKIE_PARTISI', (bool) (getenv('SIDIPA_COOKIE_PARTISI') ?: false));
 
+// ---- Login persisten --------------------------------------------------------
+// Sekali login, sesi tersimpan di perangkat selama N hari. Pengguna dapat
+// menolak lewat centangan "Jangan simpan login" pada halaman masuk.
+define('SIDIPA_INGAT_HARI', (int) (getenv('SIDIPA_INGAT_HARI') ?: 30));
+
 // Kunci rahasia untuk token turunan (bukan untuk menyimpan kata sandi).
 // Nilai ini sudah diacak; ganti dengan nilai acak lain saat produksi bila perlu.
 define('SIDIPA_KUNCI', getenv('SIDIPA_KUNCI') ?: '5bd569f407f1750c3a7ef71c49e0bad5816c200897994123f2682cac1fd72d35');

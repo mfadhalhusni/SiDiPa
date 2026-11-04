@@ -53,8 +53,48 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && aksi_post() === 'ekspor') {
         }
         $baris[] = $isi;
     }
-    log_akses('ekspor_csv_laporan', 'semester', $semesterId ?: null);
-    csv_keluar('sidipa-laporan-' . ($semester['tahun_ajaran'] ?? date('Y')) . '-smt' . ($semester['semester'] ?? 1), $header, $baris);
+    $headerKelas = array_merge(
+        ['Kelas', 'Jumlah Siswa'],
+        array_map(static fn($a): string => 'Rata ' . (string) $a['nama'], $aspek),
+        ['% Hadir', 'Pembinaan', 'Banding', 'Sertifikat']
+    );
+    $isiKelas = [];
+    foreach ($ringkasan as $r) {
+        $deret = [$r['nama'], (int) $r['jumlah_siswa']];
+        foreach ($r['aspek'] as $a) {
+            $deret[] = (float) $a['rata'];
+        }
+        $deret[] = (float) $r['persentase_hadir'];
+        $deret[] = (int) $r['pembinaan'];
+        $deret[] = (int) $r['banding'];
+        $deret[] = (int) $r['sertifikat'];
+        $isiKelas[] = $deret;
+    }
+    log_akses('ekspor_xlsx_laporan', 'semester', $semesterId ?: null);
+    xlsx_keluar(
+        'sidipa-laporan-' . ($semester['tahun_ajaran'] ?? date('Y')) . '-smt' . ($semester['semester'] ?? 1),
+        [
+            [
+                'nama' => 'Skor per Siswa',
+                'header' => $header,
+                'baris' => $baris,
+                'lebar' => array_merge([14, 28, 18], array_fill(0, count($aspek) * 3, 13)),
+            ],
+            [
+                'nama' => 'Ringkasan per Kelas',
+                'header' => $headerKelas,
+                'baris' => $isiKelas,
+                'lebar' => array_merge([22, 14], array_fill(0, count($aspek), 14), [12, 12, 12, 14]),
+            ],
+        ],
+        [
+            ['label' => 'Semester', 'nilai' => (string) ($semester['nama'] ?? '-')],
+            ['label' => 'Tahun ajaran', 'nilai' => (string) ($semester['tahun_ajaran'] ?? '-')],
+            ['label' => 'Periode', 'nilai' => $mulai . ' s/d ' . $selesai],
+            ['label' => 'Jumlah siswa', 'nilai' => count($baris)],
+            ['label' => 'Dibuat pada', 'nilai' => date('Y-m-d H:i:s') . ' WIB'],
+        ]
+    );
 }
 
 halaman_atas('Laporan', 'Per kelas / per aspek / semester', [
@@ -80,7 +120,7 @@ halaman_atas('Laporan', 'Per kelas / per aspek / semester', [
     <?= csrf_field() ?>
     <input type="hidden" name="aksi" value="ekspor">
     <input type="hidden" name="semester" value="<?= e($semesterId) ?>">
-    <button class="tombol tombol-toska" type="submit"><?= ikon('unduh', 20) ?> Ekspor CSV skor per siswa</button>
+    <button class="tombol tombol-toska" type="submit"><?= ikon('unduh', 20) ?> Unduh XLSX (skor + ringkasan)</button>
   </form>
 </section>
 

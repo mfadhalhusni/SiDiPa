@@ -337,6 +337,36 @@ function id_kelas_guru(int $guruId): array
     return array_map('intval', array_column(kelas_diampu($guruId), 'id'));
 }
 
+/**
+ * KEBIJAKAN SEKOLAH — guru boleh menilai seluruh siswa aktif tanpa perlu
+ * ditetapkan sebagai guru pengampu maupun wali kelas. Semua halaman guru
+ * memakai fungsi ini; bila sekolah ingin membatasi lagi, ubah cukup di sini.
+ */
+function daftar_siswa_untuk_guru(int $batas = 300): array
+{
+    $batas = max(1, min(1000, $batas));
+    return db_semua(
+        'SELECT s.id, s.nis, s.nama, COALESCE(k.nama, \'-\') AS kelas
+         FROM siswa s LEFT JOIN kelas k ON k.id = s.kelas_id
+         WHERE s.aktif = 1 ORDER BY k.nama, s.nama LIMIT ' . $batas
+    );
+}
+
+/** Validasi server: siswa harus ada dan aktif (tidak lagi dibatasi kelas). */
+function guru_boleh_siswa(int $siswaId): bool
+{
+    return $siswaId > 0
+        && (int) db_nilai('SELECT COUNT(*) FROM siswa WHERE id = ? AND aktif = 1', [$siswaId], 0) > 0;
+}
+
+/** Semua kelas aktif, dipakai rekap/pembinaan agar guru melihat seluruh siswa. */
+function id_kelas_semua(): array
+{
+    return array_map('intval', array_column(
+        db_semua('SELECT id FROM kelas WHERE aktif = 1 ORDER BY nama'), 'id'
+    ));
+}
+
 /** Unggah bukti opsional: jpg/png/webp, ukuran dibatasi pengaturan, nama acak. */
 function unggah_bukti(array $berkas): array
 {

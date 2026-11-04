@@ -20,14 +20,6 @@ if (in_array($peran, ['siswa', 'wali'], true) && $sendiri === null) {
 } elseif ($sendiri !== null) {
     $syarat[] = 's.id = ?';
     $param[] = (int) $sendiri['id'];
-} elseif ($peran === 'guru') {
-    $idKelas = id_kelas_guru((int) $pengguna['id']);
-    if ($idKelas === []) {
-        $syarat[] = '1 = 0';
-    } else {
-        $syarat[] = 's.kelas_id IN (' . implode(', ', array_fill(0, count($idKelas), '?')) . ')';
-        $param = array_merge($param, $idKelas);
-    }
 }
 if ($cari !== '') {
     $syarat[] = '(s.nama LIKE ? OR s.nis LIKE ?)';

@@ -4,9 +4,10 @@ declare(strict_types=1);
 /*
  | BERANDA GURU — bagian 3 PDF.
  | Satu stiker tanggal, tanpa strip kalender, tanpa banner kehadiran.
- | Kartu CATAT POIN ±150 px, enam kartu ±118 px dalam grid 2 kolom.
- | Guru biasa: kartu keenam "Catatan Saya". Wali kelas: "Banding"
- | ditambah dua kartu "Izin dan Sakit" serta "Penilaian Bulanan".
+ | Kartu CATAT POIN ±150 px, kartu aksi ±118 px dalam grid 2 kolom.
+ | Semua guru mendapat kartu yang sama (Banding, Izin dan Sakit,
+ | Penilaian Bulanan, Catatan Saya) dan menjangkau seluruh siswa aktif
+ | tanpa penugasan guru_kelas / wali kelas.
  */
 
 require_once __DIR__ . '/../../app/bootstrap.php';
@@ -14,9 +15,7 @@ require_once __DIR__ . '/../../app/bootstrap.php';
 $pengguna = auth_wajib(['guru']);
 $idGuru = (int) $pengguna['id'];
 $namaGuru = (string) $pengguna['nama'];
-$kelasDiampu = kelas_diampu($idGuru);
-$waliKelas = (int) db_nilai('SELECT COUNT(*) FROM kelas WHERE wali_kelas_id = ? AND aktif = 1', [$idGuru], 0) > 0;
-$labelKelas = $kelasDiampu !== [] ? implode(', ', array_column($kelasDiampu, 'nama')) : 'Belum ada kelas diampu';
+$labelKelas = 'Cakupan: seluruh siswa aktif';
 $semester = semester_aktif();
 $belum = jumlah_notifikasi_belum_dibaca($idGuru);
 
@@ -27,13 +26,10 @@ $kartu = [
     ['Rekap Kelas', 'Skor per aspek', 'rekap', 'bg-ungu', 'pages/umum/rekap.php'],
     ['Siswa Pembinaan', 'Di bawah ambang', 'pembinaan', 'bg-oranye', 'pages/guru/pembinaan.php'],
 ];
-if ($waliKelas) {
-    $kartu[] = ['Banding', 'Putuskan banding siswa', 'banding', 'bg-pink', 'pages/guru/banding.php'];
-    $kartu[] = ['Izin dan Sakit', 'Catat keterangan hadir', 'izin', 'bg-kuning', 'pages/guru/izin.php'];
-    $kartu[] = ['Penilaian Bulanan', '4 aspek non-otomatis', 'penilaian', 'bg-toska', 'pages/guru/penilaian.php'];
-} else {
-    $kartu[] = ['Catatan Saya', 'Riwayat & pembatalan', 'catatan', 'bg-pink', 'pages/guru/riwayat.php'];
-}
+$kartu[] = ['Banding', 'Putuskan banding siswa', 'banding', 'bg-pink', 'pages/guru/banding.php'];
+$kartu[] = ['Izin dan Sakit', 'Catat keterangan hadir', 'izin', 'bg-kuning', 'pages/guru/izin.php'];
+$kartu[] = ['Penilaian Bulanan', '4 aspek non-otomatis', 'penilaian', 'bg-toska', 'pages/guru/penilaian.php'];
+$kartu[] = ['Catatan Saya', 'Riwayat & pembatalan', 'catatan', 'bg-pink', 'pages/guru/riwayat.php'];
 
 halaman_atas('Beranda guru', '', ['nav' => 'beranda', 'tanpa_judul' => true]);
 ?>
@@ -42,7 +38,7 @@ halaman_atas('Beranda guru', '', ['nav' => 'beranda', 'tanpa_judul' => true]);
   <div class="sapa">
     <p class="label-kecil">Beranda guru</p>
     <h1>Halo, <?= e($namaGuru) ?>!</h1>
-    <p><?= e($labelKelas) ?><?= $waliKelas ? ' · Wali kelas' : '' ?></p>
+    <p><?= e($labelKelas) ?></p>
   </div>
   <a class="tombol-ikon" href="<?= e(url('pages/umum/notifikasi.php')) ?>"
      aria-label="Notifikasi<?= $belum > 0 ? ', ' . $belum . ' belum dibaca' : '' ?>">

@@ -2,6 +2,47 @@
 declare(strict_types=1);
 
 /**
+ * Otentikasi, sesi, dan "ingat saya".
+ *
+ * Kebijakan login: sekali masuk, cookie sesi DAN token "ingat saya" tersimpan
+ * 30 hari di perangkat (HP/PC). Pengguna dapat menolak lewat centangan
+ * "Jangan simpan login" pada form masuk. Token disimpan hanya sebagai hash
+ * SHA-256 di tabel ingat_login dan diputar setiap kali dipakai ulang.
+ */
+
+const AUTH_COOKIE_INGAT = 'SIDIPAINGAT';
+
+/** Lama penyimpanan login dalam detik. */
+function auth_ingat_detik(): int
+{
+    return max(1, (int) SIDIPA_INGAT_HARI) * 86400;
+}
+
+/**
+ * Aktif otomatis, kecuali pengguna menolak pada form login. Pilihan itu
+ * disimpan di sesi supaya request berikutnya tidak mengubah cookie sesi
+ * menjadi persisten lagi.
+ */
+function auth_ingat_aktif(): bool
+{
+    static $nilai = null;
+    if ($nilai !== null) {
+        return $nilai;
+    }
+    $skrip = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    $postLogin = (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST')
+        && str_contains($skrip, 'login.php');
+    if ($postLogin) {
+        $nilai = !isset($_POST['jangan_ingat']);
+    } elseif (session_status() === PHP_SESSION_ACTIVE && array_key_exists('ingat_aktif', $_SESSION)) {
+        $nilai = (bool) $_SESSION['ingat_aktif'];
+    } else {
+        $nilai = true;
+    }
+    return $nilai;
+}
+
+/**
  * SameSite yang dipakai. 'None' hanya sah bersama HTTPS; bila halaman
  * dibuka lewat HTTP (mis. curl uji lokal) otomatis turun ke 'Lax'.
  */
@@ -20,28 +61,41 @@ function auth_partisi(): bool
     return https_aktif() && SIDIPA_COOKIE_PARTISI && auth_samesite() === 'None';
 }
 
-/** Susun header Set-Cookie dengan atribut yang tidak didukung PHP 8.3. */
-function auth_header_cookie(bool $partisi): string
+/**
+ * Susun nilai header Set-Cookie. Mendukung Max-Age/Expires (login persisten)
+ * dan atribut Partitioned yang belum didukung session_set_cookie_params().
+ * $umur > 0  = cookie persisten; $umur = 0 = cookie sesi (tanpa Max-Age);
+ * $umur < 0  = hapus cookie (Max-Age=0 + Expires lampau).
+ */
+function auth_header_cookie(string $nama, string $nilai, int $umur, bool $partisi): string
 {
-    $p = session_get_cookie_params();
     $bagian = [
-        session_name() . '=' . session_id(),
-        'Path=' . ($p['path'] ?: '/'),
-        'SameSite=' . (string) ($p['samesite'] ?: 'Lax'),
+        $nama . '=' . $nilai,
+        'Path=' . jalur_cookie_sesi(),
     ];
-    if (!empty($p['domain'])) {
-        $bagian[] = 'Domain=' . $p['domain'];
+    if ($umur > 0) {
+        $bagian[] = 'Max-Age=' . $umur;
+        $bagian[] = 'Expires=' . gmdate('D, d M Y H:i:s', time() + $umur) . ' GMT';
+    } elseif ($umur < 0) {
+        $bagian[] = 'Max-Age=0';
+        $bagian[] = 'Expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
-    if (!empty($p['secure'])) {
+    $bagian[] = 'SameSite=' . auth_samesite();
+    if (https_aktif()) {
         $bagian[] = 'Secure';
     }
-    if (!empty($p['httponly'])) {
-        $bagian[] = 'HttpOnly';
-    }
+    $bagian[] = 'HttpOnly';
     if ($partisi) {
         $bagian[] = 'Partitioned';
     }
     return implode('; ', $bagian);
+}
+
+/** Hapus cookie lama yang tidak dipartisi agar tidak ada nilai ganda. */
+function auth_header_hapus_lama(string $nama): string
+{
+    return $nama . '=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path='
+        . jalur_cookie_sesi() . '; SameSite=Lax' . (https_aktif() ? '; Secure' : '');
 }
 
 /** Terapkan ulang header cookie sesi setelah session_start/regenerate_id. */
@@ -51,27 +105,26 @@ function auth_pasang_cookie(): void
         return;
     }
     $partisi = auth_partisi();
-    // Satu header saja agar tidak ada cookie ganda bernama SIDIPASES.
+    $umur = auth_ingat_aktif() ? auth_ingat_detik() : 0;
+    // Satu header sesi saja agar tidak ada cookie ganda bernama SIDIPASES.
     header_remove('Set-Cookie');
     if ($partisi) {
-        // Buang cookie lama yang tidak dipartisi, supaya browser tidak
-        // mengirim dua nilai SIDIPASES sekaligus ke PHP.
-        $p = session_get_cookie_params();
-        header('Set-Cookie: ' . session_name() . '=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; '
-            . 'Max-Age=0; Path=' . ($p['path'] ?: '/') . '; SameSite=Lax', false);
+        header('Set-Cookie: ' . auth_header_hapus_lama(session_name()), false);
     }
-    header('Set-Cookie: ' . auth_header_cookie($partisi), false);
+    header('Set-Cookie: ' . auth_header_cookie(session_name(), session_id(), $umur, $partisi), false);
 }
 
-/** Mulai sesi dengan cookie HttpOnly + SameSite, secure otomatis saat HTTPS. */
+/** Mulai sesi dengan cookie persisten + HttpOnly + SameSite. */
 function auth_mulai(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
+    // Nilai di bawah akan dioverride auth_pasang_cookie() SETELAH
+    // session_start(), saat $_SESSION sudah bisa dibaca (pilihan "ingat saya").
     session_name('SIDIPASES');
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => auth_ingat_detik(),
         'path' => jalur_cookie_sesi(),
         'domain' => '',
         'secure' => https_aktif(),
@@ -79,9 +132,115 @@ function auth_mulai(): void
         'samesite' => auth_samesite(),
     ]);
     ini_set('session.use_strict_mode', '1');
-    ini_set('session.gc_maxlifetime', '7200');
+    ini_set('session.gc_maxlifetime', (string) max(7200, auth_ingat_detik()));
     session_start();
     auth_pasang_cookie();
+}
+
+/** Buat token "ingat saya" baru; $tokenLama diputar (dihapus) bila ada. */
+function auth_ingat_simpan(int $penggunaId, ?string $tokenLama = null): void
+{
+    try {
+        if ($tokenLama !== null) {
+            db_jalankan('DELETE FROM ingat_login WHERE token_hash = ?', [hash('sha256', $tokenLama)]);
+        }
+        $token = bin2hex(random_bytes(32));
+        db_sisip('ingat_login', [
+            'pengguna_id' => $penggunaId,
+            'token_hash' => hash('sha256', $token),
+            'kedaluwarsa' => date('Y-m-d H:i:s', time() + auth_ingat_detik()),
+        ]);
+        // Bersihkan token kedaluwarsa sesekali agar tabel tidak menumpuk.
+        if (random_int(1, 20) === 1) {
+            db_jalankan('DELETE FROM ingat_login WHERE kedaluwarsa < NOW()', []);
+        }
+    } catch (Throwable $galat) {
+        catat_kesalahan('auth_ingat_simpan gagal: ' . $galat->getMessage());
+        return;
+    }
+    if (headers_sent()) {
+        return;
+    }
+    $partisi = auth_partisi();
+    if ($partisi) {
+        header('Set-Cookie: ' . auth_header_hapus_lama(AUTH_COOKIE_INGAT), false);
+    }
+    header('Set-Cookie: ' . auth_header_cookie(
+        AUTH_COOKIE_INGAT, $token, auth_ingat_detik(), $partisi
+    ), false);
+}
+
+/** Cabut semua token "ingat saya" milik satu akun (mis. setelah ganti sandi). */
+function auth_ingat_cabut_semua(int $penggunaId): void
+{
+    try {
+        db_jalankan('DELETE FROM ingat_login WHERE pengguna_id = ?', [$penggunaId]);
+    } catch (Throwable $galat) {
+        catat_kesalahan('auth_ingat_cabut_semua gagal: ' . $galat->getMessage());
+    }
+}
+
+/** Hapus cookie "ingat saya" di browser + baris token terkait. */
+function auth_ingat_hapus(): void
+{
+    $token = (string) ($_COOKIE[AUTH_COOKIE_INGAT] ?? '');
+    if (preg_match('/^[a-f0-9]{64}$/', $token) === 1) {
+        try {
+            db_jalankan('DELETE FROM ingat_login WHERE token_hash = ?', [hash('sha256', $token)]);
+        } catch (Throwable $galat) {
+            catat_kesalahan('auth_ingat_hapus gagal: ' . $galat->getMessage());
+        }
+    }
+    if (headers_sent()) {
+        return;
+    }
+    header('Set-Cookie: ' . auth_header_cookie(AUTH_COOKIE_INGAT, '', -1, false), false);
+    if (auth_partisi()) {
+        header('Set-Cookie: ' . auth_header_cookie(AUTH_COOKIE_INGAT, '', -1, true), false);
+    }
+    unset($_COOKIE[AUTH_COOKIE_INGAT]);
+}
+
+/**
+ * Pulihkan login dari cookie "ingat saya" bila sesi PHP sudah hilang.
+ * Mengembalikan id pengguna atau null. Token selalu diputar.
+ */
+function auth_ingat_pulih(): ?int
+{
+    $token = (string) ($_COOKIE[AUTH_COOKIE_INGAT] ?? '');
+    if (preg_match('/^[a-f0-9]{64}$/', $token) !== 1) {
+        if ($token !== '') {
+            auth_ingat_hapus();
+        }
+        return null;
+    }
+    try {
+        $baris = db_satu(
+            'SELECT t.id, t.pengguna_id, p.peran, p.aktif
+             FROM ingat_login t JOIN pengguna p ON p.id = t.pengguna_id
+             WHERE t.token_hash = ? AND t.kedaluwarsa > NOW() LIMIT 1',
+            [hash('sha256', $token)]
+        );
+        if ($baris === null || (int) $baris['aktif'] !== 1) {
+            auth_ingat_hapus();
+            return null;
+        }
+        $id = (int) $baris['pengguna_id'];
+        session_regenerate_id(true);
+        auth_pasang_cookie();
+        $_SESSION['pengguna_id'] = $id;
+        $_SESSION['peran'] = (string) $baris['peran'];
+        $_SESSION['waktu_masuk'] = time();
+        $_SESSION['ingat_aktif'] = true;
+        unset($_SESSION['csrf_token']);
+        csrf_token();
+        auth_ingat_simpan($id, $token);   // rotasi token
+        log_akses('login_ingat', 'auth', $id, $id);
+        return $id;
+    } catch (Throwable $galat) {
+        catat_kesalahan('auth_ingat_pulih gagal: ' . $galat->getMessage());
+        return null;
+    }
 }
 
 function auth_pengguna(): ?array
@@ -93,6 +252,11 @@ function auth_pengguna(): ?array
     }
     $sudah = true;
     $id = $_SESSION['pengguna_id'] ?? null;
+    if ($id === null) {
+        // Sesi hilang (browser ditutup, server restart, dsb.) -> pulihkan
+        // otomatis dari cookie "ingat saya" tanpa perlu login ulang.
+        $id = auth_ingat_pulih();
+    }
     if ($id === null) {
         return null;
     }
@@ -171,33 +335,38 @@ function auth_masuk(string $username, string $kataSandi): array
     $_SESSION['pengguna_id'] = (int) $pengguna['id'];
     $_SESSION['peran'] = $pengguna['peran'];
     $_SESSION['waktu_masuk'] = time();
+    $ingat = auth_ingat_aktif();
+    $_SESSION['ingat_aktif'] = $ingat;
     unset($_SESSION['csrf_token']);
     csrf_token();
+    if ($ingat) {
+        auth_ingat_simpan((int) $pengguna['id']);
+    } else {
+        auth_ingat_hapus();
+    }
     log_akses('login_berhasil', 'auth', (int) $pengguna['id'], (int) $pengguna['id']);
     return ['ok' => true, 'pengguna' => $pengguna];
 }
 
 function auth_keluar(): void
 {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        return;
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        $_SESSION = [];
     }
-    $_SESSION = [];
-    if (ini_get('session.use_cookies') && !headers_sent()) {
-        $param = session_get_cookie_params();
-        $dasar = session_name() . '=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0'
-            . '; Path=' . ($param['path'] ?: '/')
-            . '; HttpOnly; SameSite=' . (string) ($param['samesite'] ?: 'Lax');
-        if (!empty($param['secure'])) {
-            $dasar .= '; Secure';
-        }
+    if (!headers_sent()) {
+        // Header sesi diganti total, lalu cookie "ingat saya" dihapus SETELAH
+        // header_remove agar perintah penghapusannya tidak ikut terbuang.
+        $partisi = auth_partisi();
         header_remove('Set-Cookie');
-        header('Set-Cookie: ' . $dasar, false);
-        if (auth_partisi()) {
-            header('Set-Cookie: ' . $dasar . '; Partitioned', false);
+        header('Set-Cookie: ' . auth_header_cookie(session_name(), '', -1, false), false);
+        if ($partisi) {
+            header('Set-Cookie: ' . auth_header_cookie(session_name(), '', -1, true), false);
         }
     }
-    session_destroy();
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
+    auth_ingat_hapus();
 }
 
 function auth_landing(string $peran): string
@@ -272,6 +441,11 @@ function auth_ganti_sandi(int $id, string $lama, string $baru, string $ulang): a
         'UPDATE pengguna SET password_hash = ?, wajib_ganti_password = 0 WHERE id = ?',
         [password_hash($baru, PASSWORD_DEFAULT), $id]
     );
+    // Semua perangkat lain harus login ulang; perangkat ini dapat token baru.
+    auth_ingat_cabut_semua($id);
+    if (auth_ingat_aktif()) {
+        auth_ingat_simpan($id);
+    }
     log_akses('ganti_kata_sandi', 'pengguna', $id, $id);
     return ['ok' => true, 'pesan' => 'Kata sandi berhasil diperbarui.'];
 }

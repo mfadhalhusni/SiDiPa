@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- | Keputusan banding: wali kelas untuk siswa di kelasnya, atau admin.
+ | Keputusan banding: guru atau admin, untuk siswa mana pun.
  | Banding diterima -> catatan dibatalkan (tidak dihapus) + poin kembali.
  | Tidak ada identitas pencatat yang ditampilkan pada halaman ini.
  */
@@ -22,7 +22,8 @@ function boleh_putus_banding(int $idPengguna, string $peran, int $siswaId): bool
     if ($peran === 'admin') {
         return true;
     }
-    return wali_kelas_siswa($siswaId) === $idPengguna;
+    // Guru boleh memutus banding siswa mana pun (tanpa penugasan kelas).
+    return true;
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
@@ -46,7 +47,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         } elseif (trim($alasan) === '') {
             $pesanGalat = 'Alasan keputusan wajib diisi.';
         } elseif (!boleh_putus_banding($idPengguna, $peran, (int) $baris['siswa_id'])) {
-            $pesanGalat = 'Anda bukan wali kelas siswa ini.';
+            $pesanGalat = 'Siswa tidak ditemukan atau tidak aktif.';
         } else {
             db_transaksi(function () use ($baris, $keputusan, $alasan, $idPengguna): void {
                 db_jalankan(
@@ -70,10 +71,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
 $syarat = ['1 = 1'];
 $param = [];
-if ($peran !== 'admin') {
-    $syarat[] = 'k.wali_kelas_id = ?';
-    $param[] = $idPengguna;
-}
 $daftar = db_semua(
     'SELECT b.id, b.alasan, b.status, b.keputusan, b.dibuat_pada, b.diputuskan_pada,
             s.nama AS nama_siswa, s.nis, k.nama AS kelas,
@@ -91,16 +88,11 @@ $daftar = db_semua(
     $param
 );
 
-halaman_atas('Banding siswa', $peran === 'admin' ? 'Panel admin' : 'Wali kelas', ['nav' => 'beranda']);
+halaman_atas('Banding siswa', $peran === 'admin' ? 'Panel admin' : 'Semua siswa', ['nav' => 'beranda']);
 ?>
 <?php if ($pesanGalat !== ''): ?>
   <div class="pesan pesan-galat" role="alert"><?= ikon('peringatan', 20) ?><span><?= e($pesanGalat) ?></span></div>
 <?php endif; ?>
-<?php if ($peran !== 'admin' && (int) db_nilai('SELECT COUNT(*) FROM kelas WHERE wali_kelas_id = ? AND aktif = 1', [$idPengguna], 0) === 0): ?>
-  <div class="pesan pesan-galat" role="alert"><?= ikon('peringatan', 20) ?>
-    <span>Halaman keputusan banding hanya untuk wali kelas atau admin. Anda belum ditetapkan sebagai wali kelas.</span></div>
-<?php endif; ?>
-
 <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
   <span>Keputusan wajib menyertakan alasan. Banding yang diterima membatalkan catatan tanpa menghapusnya.</span>
 </div>

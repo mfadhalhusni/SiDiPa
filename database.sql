@@ -506,3 +506,22 @@ INSERT IGNORE INTO pengaturan (kunci, nilai, grup) VALUES
  ('wa_template_pelanggaran_berat', 'Yth. wali murid, {nama} ({kelas}) mendapat catatan {aspek} {poin} pada {tanggal}. Mohon koordinasi dengan BK. - SiDiPa', 'wa'),
  ('wa_template_skor_rendah', 'Yth. wali murid, skor {aspek} {nama} ({kelas}) perlu pembinaan. - SiDiPa', 'wa'),
  ('wa_template_sertifikat', 'Yth. wali murid, sertifikat karakter {nama} ({kelas}) telah terbit pada {tanggal}. - SiDiPa', 'wa');
+
+
+-- --------------------------------------------------------------------------
+-- 22. Login persisten ("ingat saya")
+-- Hanya hash SHA-256 token yang disimpan; token mentah ada di cookie perangkat.
+-- Token diputar setiap kali dipakai, jadi token lama langsung tidak berlaku.
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ingat_login (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  pengguna_id INT UNSIGNED NOT NULL,
+  token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  dibuat_pada DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  kedaluwarsa DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_ingat_token (token_hash),
+  KEY idx_ingat_pengguna (pengguna_id),
+  KEY idx_ingat_kedaluwarsa (kedaluwarsa),
+  CONSTRAINT fk_ingat_pengguna FOREIGN KEY (pengguna_id) REFERENCES pengguna (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -11,21 +11,7 @@ $idGuru = (int) $pengguna['id'];
 $semesterId = (int) (semester_aktif()['id'] ?? 0);
 $pesanGalat = '';
 
-$kelasWali = db_semua(
-    'SELECT id, nama FROM kelas WHERE wali_kelas_id = ? AND aktif = 1 ORDER BY nama',
-    [$idGuru]
-);
-$idKelasWali = array_map('intval', array_column($kelasWali, 'id'));
-$siswa = [];
-if ($idKelasWali !== []) {
-    $tanda = implode(', ', array_fill(0, count($idKelasWali), '?'));
-    $siswa = db_semua(
-        'SELECT s.id, s.nis, s.nama, k.nama AS kelas FROM siswa s
-         JOIN kelas k ON k.id = s.kelas_id
-         WHERE s.aktif = 1 AND s.kelas_id IN (' . $tanda . ') ORDER BY k.nama, s.nama LIMIT 300',
-        $idKelasWali
-    );
-}
+$siswa = daftar_siswa_untuk_guru();
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     csrf_wajib();
@@ -36,13 +22,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $selesai = post('tgl_selesai', '', 10);
         $jenis = post('jenis', '', 10);
         $keterangan = post('keterangan', '', 255);
-        $milik = $siswaId > 0 && in_array(
-            (int) db_nilai('SELECT kelas_id FROM siswa WHERE id = ? LIMIT 1', [$siswaId], 0),
-            $idKelasWali,
-            true
-        );
+        $milik = guru_boleh_siswa($siswaId);
         if (!$milik) {
-            $pesanGalat = 'Pilih siswa dari kelas yang Anda walikan.';
+            $pesanGalat = 'Pilih siswa yang masih aktif.';
         } elseif (!tanggal_valid($mulai) || !tanggal_valid($selesai) || $selesai < $mulai) {
             $pesanGalat = 'Rentang tanggal tidak valid.';
         } elseif (!in_array($jenis, ['izin', 'sakit', 'udzur'], true)) {
@@ -69,14 +51,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
     } elseif ($aksi === 'hapus') {
         $id = post_int('izin_id');
-        $boleh = (int) db_nilai(
-            'SELECT COUNT(*) FROM izin_siswa i JOIN siswa s ON s.id = i.siswa_id
-             JOIN kelas k ON k.id = s.kelas_id WHERE i.id = ? AND k.wali_kelas_id = ?',
-            [$id, $idGuru],
-            0
-        );
+        $boleh = (int) db_nilai('SELECT COUNT(*) FROM izin_siswa WHERE id = ?', [$id], 0);
         if ($boleh === 0) {
-            $pesanGalat = 'Data izin tidak ditemukan di kelas Anda.';
+            $pesanGalat = 'Data izin tidak ditemukan.';
         } else {
             db_jalankan('DELETE FROM izin_siswa WHERE id = ?', [$id]);
             flash('Keterangan izin dihapus.');
@@ -93,15 +70,15 @@ $daftar = db_semua(
      ORDER BY i.tgl_mulai DESC, i.id DESC LIMIT 200'
 );
 
-halaman_atas('Izin dan Sakit', 'Wali kelas', ['nav' => 'siswa']);
+halaman_atas('Izin dan Sakit', 'Semua siswa aktif', ['nav' => 'siswa']);
 ?>
 <?php if ($pesanGalat !== ''): ?>
   <div class="pesan pesan-galat" role="alert"><?= ikon('peringatan', 20) ?><span><?= e($pesanGalat) ?></span></div>
 <?php endif; ?>
 
-<?php if ($kelasWali === []): ?>
+<?php if ($siswa === []): ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-    <span>Halaman ini khusus wali kelas. Anda belum ditetapkan sebagai wali kelas.</span></div>
+    <span>Belum ada siswa aktif. Tambahkan siswa terlebih dahulu.</span></div>
 <?php else: ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
     <span>Izin, sakit, dan udzur bersifat <strong>netral</strong>: tidak memotong poin, dan poin otomatis yang sudah terlanjur dibuat pada rentang tanggal dibatalkan.</span>

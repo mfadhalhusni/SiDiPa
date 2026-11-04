@@ -31,7 +31,6 @@ if (!isset($modeValid[$mode])) {
 $token = post('token', '', 100);
 $nis = post('nis', '', 30);
 
-$idKelas = $peran === 'guru' ? id_kelas_guru((int) $pengguna['id']) : [];
 $syarat = ['s.aktif = 1'];
 $param = [];
 if ($token !== '') {
@@ -43,13 +42,6 @@ if ($token !== '') {
 } else {
     json_keluar(['ok' => false, 'pesan' => 'Pindai QR atau isi NIS terlebih dahulu.'], 422);
 }
-if ($peran === 'guru') {
-    if ($idKelas === []) {
-        json_keluar(['ok' => false, 'pesan' => 'Anda belum ditetapkan sebagai guru pengampu kelas.'], 403);
-    }
-    $syarat[] = 's.kelas_id IN (' . implode(', ', array_fill(0, count($idKelas), '?')) . ')';
-    $param = array_merge($param, $idKelas);
-}
 $siswa = db_satu(
     'SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama AS kelas
      FROM siswa s LEFT JOIN kelas k ON k.id = s.kelas_id
@@ -57,7 +49,7 @@ $siswa = db_satu(
     $param
 );
 if ($siswa === null) {
-    json_keluar(['ok' => false, 'pesan' => 'Siswa tidak ditemukan atau di luar kelas yang Anda ampu.'], 404);
+    json_keluar(['ok' => false, 'pesan' => 'Siswa tidak ditemukan atau sudah tidak aktif.'], 404);
 }
 
 $tanggal = date('Y-m-d');

@@ -69,7 +69,7 @@ halaman_atas('Dashboard admin', pengaturan('nama_sekolah', 'SiDiPa'), ['nav' => 
       <a href="<?= e(url('pages/admin/kartu.php')) ?>"><?= ikon('cetak', 22) ?> Cetak kartu QR siswa</a>
       <a href="<?= e(url('pages/admin/hari_libur.php')) ?>"><?= ikon('libur', 22) ?> Hari libur</a>
       <a href="<?= e(url('pages/admin/sertifikat.php')) ?>"><?= ikon('sertifikat', 22) ?> Semester & sertifikat</a>
-      <a href="<?= e(url('pages/umum/rekap_kehadiran.php')) ?>"><?= ikon('rekap', 22) ?> Rekap kehadiran + CSV</a>
+      <a href="<?= e(url('pages/umum/rekap_kehadiran.php')) ?>"><?= ikon('rekap', 22) ?> Rekap kehadiran + XLSX</a>
       <a href="<?= e(url('pages/umum/laporan.php')) ?>"><?= ikon('grafik', 22) ?> Laporan per kelas</a>
       <a href="<?= e(url('pages/admin/log_akses.php')) ?>"><?= ikon('log', 22) ?> Log akses</a>
     </div>

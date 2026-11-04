@@ -10,21 +10,9 @@ cek_input_semester();
 $idGuru = (int) $pengguna['id'];
 $semester = semester_wajib();
 $semesterId = (int) $semester['id'];
-$idKelas = id_kelas_guru($idGuru);
 $batasHarian = (int) pengaturan('batas_pengurangan_harian', '10');
 $pesanGalat = '';
-
-$siswa = [];
-if ($idKelas !== []) {
-    $tanda = implode(', ', array_fill(0, count($idKelas), '?'));
-    $siswa = db_semua(
-        'SELECT s.id, s.nis, s.nama, k.nama AS kelas FROM siswa s
-         LEFT JOIN kelas k ON k.id = s.kelas_id
-         WHERE s.aktif = 1 AND s.kelas_id IN (' . $tanda . ')
-         ORDER BY k.nama, s.nama LIMIT 300',
-        $idKelas
-    );
-}
+$siswa = daftar_siswa_untuk_guru();
 $katalog = db_semua(
     'SELECT kp.id, kp.kode, kp.nama, kp.poin, kp.jenis, kp.tingkat, kp.wajib_keterangan,
             a.id AS aspek_id, a.nama AS aspek
@@ -43,17 +31,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $tanggal = date('Y-m-d');
     }
 
-    $boleh = $siswaId > 0 && in_array(
-        (int) db_nilai('SELECT kelas_id FROM siswa WHERE id = ? LIMIT 1', [$siswaId], 0),
-        $idKelas,
-        true
-    );
+    $boleh = guru_boleh_siswa($siswaId);
     $baris = $katalogId > 0
         ? db_satu('SELECT * FROM katalog_poin WHERE id = ? AND aktif = 1 AND otomatis = 0 LIMIT 1', [$katalogId])
         : null;
 
     if (!$boleh) {
-        $pesanGalat = 'Pilih siswa dari kelas yang Anda ampu.';
+        $pesanGalat = 'Pilih siswa yang masih aktif.';
     } elseif ($baris === null) {
         $pesanGalat = 'Pilih kejadian dari katalog poin yang tersedia.';
     } else {
@@ -123,7 +107,7 @@ halaman_atas('Catat poin', 'Beranda guru / Catat poin', [
 
 <?php if ($siswa === [] || $katalog === []): ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-    <span><?= $siswa === [] ? 'Anda belum ditetapkan sebagai guru pengampu kelas.' : 'Katalog poin manual belum tersedia.' ?> Minta admin melengkapi data.</span>
+    <span><?= $siswa === [] ? 'Belum ada siswa aktif.' : 'Katalog poin manual belum tersedia.' ?> Minta admin melengkapi data.</span>
   </div>
 <?php else: ?>
   <form class="kartu form-kartu" method="post" action="<?= e(url('pages/guru/catat_poin.php')) ?>" enctype="multipart/form-data">
@@ -137,7 +121,7 @@ halaman_atas('Catat poin', 'Beranda guru / Catat poin', [
             <option value="<?= (int) $s['id'] ?>"><?= e($s['nama']) ?> · <?= e($s['nis']) ?> · <?= e($s['kelas'] ?? '-') ?></option>
           <?php endforeach; ?>
         </select>
-        <p class="bantuan">Hanya siswa dari kelas yang Anda ampu yang tampil.</p>
+        <p class="bantuan">Semua siswa aktif tampil; penugasan kelas tidak diperlukan.</p>
       </div>
       <div class="form-baris lebar-penuh">
         <label for="katalog_id">Kejadian / katalog poin <span class="wajib">wajib</span></label>

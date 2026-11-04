@@ -17,17 +17,9 @@ if (!isset($modeValid[$mode])) {
     $mode = 'masuk';
 }
 
-$idKelas = $peran === 'guru' ? id_kelas_guru((int) $pengguna['id']) : [];
-$syarat = [];
+// Guru dapat memindai seluruh siswa aktif; penugasan kelas tidak diperlukan.
+$where = '';
 $param = [];
-if ($idKelas !== []) {
-    $tanda = implode(', ', array_fill(0, count($idKelas), '?'));
-    $syarat[] = 's.kelas_id IN (' . $tanda . ')';
-    $param = array_merge($param, $idKelas);
-} elseif ($peran === 'guru') {
-    $syarat[] = '1 = 0';
-}
-$where = $syarat !== [] ? ' WHERE ' . implode(' AND ', $syarat) : '';
 
 $terakhir = db_semua(
     'SELECT * FROM (

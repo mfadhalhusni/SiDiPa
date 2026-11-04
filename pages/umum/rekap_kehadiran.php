@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 /*
  | Tahap 3 — Rekap kehadiran HARIAN, BULANAN, dan SEMESTER per siswa dan per
- | kelas dengan ekspor CSV (bagian 7 PDF). Akses dibatasi di server:
+ | kelas dengan ekspor XLSX (bagian 7 PDF). Akses dibatasi di server:
  |  - siswa / wali: hanya anaknya sendiri
- |  - guru: hanya kelas yang diampu
+ |  - guru: seluruh siswa aktif (penugasan kelas tidak diperlukan)
  |  - admin / BK / kepala sekolah: semua kelas
  | Kolom yang ditampilkan murni agregat kehadiran; tidak ada pencatat_id.
  */
@@ -44,8 +44,6 @@ if (in_array($peran, ['siswa', 'wali'], true)) {
         $saring['siswa_id'] = (int) $sendiri['id'];
     }
     $filterKelas = 0;
-} elseif ($peran === 'guru') {
-    $saring['id_kelas'] = id_kelas_guru($idPengguna);
 } elseif ($filterKelas > 0) {
     $saring['kelas_id'] = $filterKelas;
 }
@@ -66,7 +64,7 @@ foreach ($barisSiswa as $b) {
 $efektif = $total['hadir'] + $total['terlambat'];
 $total['persentase'] = $total['tercatat'] > 0 ? round($efektif / $total['tercatat'] * 100, 1) : 0.0;
 
-// Ekspor CSV: POST + CSRF, dijalankan SEBELUM ada keluaran HTML.
+// Ekspor XLSX: POST + CSRF, dijalankan SEBELUM ada keluaran HTML.
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && aksi_post() === 'ekspor') {
     csrf_wajib();
     $isi = [];
@@ -74,15 +72,47 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && aksi_post() === 'ekspor') {
         $isi[] = [
             $periode['mulai'] . ' s/d ' . $periode['selesai'],
             $b['nis'], $b['nama'], $b['kelas'],
-            $b['hadir'], $b['awal'], $b['terlambat'], $b['izin'], $b['sakit'], $b['alpa'],
-            $b['tercatat'], $b['persentase'] . '%',
+            (int) $b['hadir'], (int) $b['awal'], (int) $b['terlambat'],
+            (int) $b['izin'], (int) $b['sakit'], (int) $b['alpa'],
+            (int) $b['tercatat'], $b['persentase'] . '%',
         ];
     }
-    log_akses('ekspor_csv_kehadiran', 'kehadiran');
-    csv_keluar('sidipa-rekap-kehadiran-' . $periode['mulai'] . '-' . $periode['selesai'], [
-        'Periode', 'NIS', 'Nama', 'Kelas', 'Hadir', 'Hadir Awal', 'Terlambat',
-        'Izin', 'Sakit', 'Alpa', 'Hari Tercatat', 'Persentase Hadir',
-    ], $isi);
+    $isiKelas = [];
+    foreach ($perKelas as $k) {
+        $isiKelas[] = [
+            $k['kelas'], (int) $k['siswa'], (int) $k['hadir'], (int) $k['awal'],
+            (int) $k['terlambat'], (int) $k['izin'], (int) $k['sakit'], (int) $k['alpa'],
+            (int) $k['tercatat'], $k['persentase'] . '%',
+        ];
+    }
+    log_akses('ekspor_xlsx_kehadiran', 'kehadiran');
+    xlsx_keluar(
+        'sidipa-rekap-kehadiran-' . $periode['mulai'] . '-' . $periode['selesai'],
+        [
+            [
+                'nama' => 'Rekap Siswa',
+                'header' => ['Periode', 'NIS', 'Nama', 'Kelas', 'Hadir', 'Hadir Awal',
+                    'Terlambat', 'Izin', 'Sakit', 'Alpa', 'Hari Tercatat', 'Persentase Hadir'],
+                'baris' => $isi,
+                'lebar' => [24, 14, 28, 18, 10, 12, 12, 10, 10, 10, 15, 18],
+            ],
+            [
+                'nama' => 'Ringkasan Kelas',
+                'header' => ['Kelas', 'Jumlah Siswa', 'Hadir', 'Hadir Awal', 'Terlambat',
+                    'Izin', 'Sakit', 'Alpa', 'Hari Tercatat', 'Persentase Hadir'],
+                'baris' => $isiKelas,
+                'lebar' => [22, 14, 10, 12, 12, 10, 10, 10, 15, 18],
+            ],
+        ],
+        [
+            ['label' => 'Jenis rekap', 'nilai' => $jenis],
+            ['label' => 'Periode', 'nilai' => $periode['mulai'] . ' s/d ' . $periode['selesai']],
+            ['label' => 'Label', 'nilai' => (string) $periode['label']],
+            ['label' => 'Hari libur', 'nilai' => (int) $libur . ' hari'],
+            ['label' => 'Jumlah siswa', 'nilai' => count($barisSiswa)],
+            ['label' => 'Dibuat pada', 'nilai' => date('Y-m-d H:i:s') . ' WIB'],
+        ]
+    );
 }
 
 $daftarKelas = daftar_kelas(false);
@@ -140,8 +170,8 @@ halaman_atas('Rekap Kehadiran', 'Harian / Bulanan / Semester', [
     <?= csrf_field() ?>
     <input type="hidden" name="aksi" value="ekspor">
     <?php foreach ($parameter as $k => $v): ?><input type="hidden" name="<?= e($k) ?>" value="<?= e($v) ?>"><?php endforeach; ?>
-    <button class="tombol tombol-toska" type="submit"><?= ikon('unduh', 20) ?> Ekspor CSV</button>
-    <span class="teks-kecil">Berkas CSV memuat baris yang sedang ditampilkan.</span>
+    <button class="tombol tombol-toska" type="submit"><?= ikon('unduh', 20) ?> Unduh XLSX</button>
+    <span class="teks-kecil">Berkas .xlsx berisi lembar Rekap Siswa, Ringkasan Kelas, dan Keterangan.</span>
   </form>
 </section>
 

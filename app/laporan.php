@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  |--------------------------------------------------------------------------
- | Tahap 3–4: rekap kehadiran, ekspor CSV, dan ringkasan lintas kelas.
+ | Tahap 3–4: rekap kehadiran, ekspor XLSX, dan ringkasan lintas kelas.
  | Semua fungsi di sini HANYA membaca kolom agregat. Tidak ada pencatat_id,
  | qr_token, nomor WhatsApp, atau riwayat pelanggaran yang ikut terkirim.
  |--------------------------------------------------------------------------
@@ -146,29 +146,7 @@ function rekap_per_kelas(array $baris): array
     return array_values($kelompok);
 }
 
-/** Kirim berkas CSV dengan BOM (ramah Excel Indonesia) lalu hentikan respon. */
-function csv_keluar(string $namaBerkas, array $header, array $baris): void
-{
-    $namaBerkas = preg_replace('/[^A-Za-z0-9_.-]/', '_', $namaBerkas);
-    if (!str_ends_with($namaBerkas, '.csv')) {
-        $namaBerkas .= '.csv';
-    }
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $namaBerkas . '"');
-    header('Cache-Control: no-store, no-cache, must-revalidate');
-    header('X-Content-Type-Options: nosniff');
-    $keluar = fopen('php://output', 'w');
-    if ($keluar === false) {
-        throw new RuntimeException('Aliran CSV tidak dapat dibuka.');
-    }
-    fwrite($keluar, "\xEF\xBB\xBF");
-    fputcsv($keluar, $header, ';');
-    foreach ($baris as $b) {
-        fputcsv($keluar, array_map(static fn($v): string => (string) $v, $b), ';');
-    }
-    fclose($keluar);
-    exit;
-}
+/* Ekspor laporan memakai xlsx_keluar() dari app/xlsx.php (format .xlsx). */
 
 /**
  * Ringkasan per kelas untuk dashboard BK / kepala sekolah / laporan.

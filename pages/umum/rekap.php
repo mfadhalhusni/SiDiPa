@@ -20,15 +20,6 @@ $daftarSiswa = [];
 if ($sendiri === null && $semesterId > 0) {
     $syarat = ['s.aktif = 1'];
     $param = [];
-    if ($peran === 'guru') {
-        $idKelas = id_kelas_guru((int) $pengguna['id']);
-        if ($idKelas === []) {
-            $syarat[] = '1 = 0';
-        } else {
-            $syarat[] = 's.kelas_id IN (' . implode(', ', array_fill(0, count($idKelas), '?')) . ')';
-            $param = $idKelas;
-        }
-    }
     $daftarSiswa = db_semua(
         'SELECT s.id, s.nama, k.nama AS kelas FROM siswa s LEFT JOIN kelas k ON k.id = s.kelas_id
          WHERE ' . implode(' AND ', $syarat) . ' ORDER BY k.nama, s.nama LIMIT 200',

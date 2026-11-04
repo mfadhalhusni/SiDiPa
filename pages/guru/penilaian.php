@@ -28,18 +28,7 @@ $opsi = [
     'sangat_baik' => 'Sangat Baik (' . (int) pengaturan('penilaian_sangat_baik', '5') . ')',
 ];
 
-$kelasWali = db_semua('SELECT id, nama FROM kelas WHERE wali_kelas_id = ? AND aktif = 1 ORDER BY nama', [$idGuru]);
-$idKelas = array_map('intval', array_column($kelasWali, 'id'));
-$siswa = [];
-if ($idKelas !== []) {
-    $tanda = implode(', ', array_fill(0, count($idKelas), '?'));
-    $siswa = db_semua(
-        'SELECT s.id, s.nis, s.nama, k.nama AS kelas FROM siswa s
-         JOIN kelas k ON k.id = s.kelas_id
-         WHERE s.aktif = 1 AND s.kelas_id IN (' . $tanda . ') ORDER BY k.nama, s.nama LIMIT 300',
-        $idKelas
-    );
-}
+$siswa = daftar_siswa_untuk_guru();
 $terpilih = null;
 foreach ($siswa as $s) {
     if ((int) $s['id'] === $siswaId) {
@@ -97,15 +86,15 @@ $rekap = db_semua(
     [$semesterId]
 );
 
-halaman_atas('Penilaian Bulanan', 'Wali kelas · ' . $bulan, ['nav' => 'siswa']);
+halaman_atas('Penilaian Bulanan', 'Semua siswa · ' . $bulan, ['nav' => 'siswa']);
 ?>
 <?php if ($pesanGalat !== ''): ?>
   <div class="pesan pesan-galat" role="alert"><?= ikon('peringatan', 20) ?><span><?= e($pesanGalat) ?></span></div>
 <?php endif; ?>
 
-<?php if ($kelasWali === []): ?>
+<?php if ($siswa === []): ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-    <span>Penilaian bulanan hanya untuk wali kelas. Anda belum ditetapkan sebagai wali kelas.</span></div>
+    <span>Belum ada siswa aktif. Tambahkan siswa terlebih dahulu.</span></div>
 <?php else: ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
     <span>Empat aspek non-otomatis dinilai per bulan. Unik per semester, siswa, aspek, dan bulan; mengubah nilai membatalkan catatan lama dan membuat catatan baru bersumber <code>berkala</code>.</span>
