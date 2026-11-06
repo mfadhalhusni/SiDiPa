@@ -67,6 +67,19 @@ try {
                 ? 'Unggah foto profil siap dipakai.'
                 : 'Belum ada. Jalankan ALTER TABLE pada bagian 16 README agar siswa dapat mengunggah foto profil.'
         );
+        $tabelPenanganan = (int) db_nilai(
+            "SELECT COUNT(*) FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = 'penanganan_siswa'",
+            [],
+            0
+        );
+        tambah_cek(
+            'Tabel penanganan_siswa (level penanganan BK)',
+            $tabelPenanganan > 0,
+            $tabelPenanganan > 0
+                ? 'Menu Siswa Bermasalah pada akun BK siap dipakai.'
+                : 'Belum ada. Jalankan contoh/migrasi_penanganan_bk.sql sekali agar Guru BK dapat menetapkan level penanganan siswa.'
+        );
         $predikatLengkap = (int) db_nilai(
             "SELECT COUNT(*) FROM pengaturan WHERE kunci IN
              ('predikat_aplus','predikat_a','predikat_bplus','predikat_b',

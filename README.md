@@ -2,7 +2,7 @@
 
 Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan sertifikat digital untuk satu SMK. Dibuat untuk **shared hosting cPanel**: PHP 8.1+ tanpa framework, MySQL/MariaDB lewat PDO, HTML/CSS/JavaScript vanilla tanpa build step, tanpa Composer. Seluruh antarmuka berbahasa Indonesia dan bergaya **neo brutalism** buatan sendiri.
 
-> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16), serta **skala predikat 8 tingkat + username siswa untuk login** (bagian 17), **QR kartu berisi username + saran otomatis + bunyi bip pada scan** (bagian 18), **username bebas + saran siswa di seluruh halaman + Rincian angka disederhanakan** (bagian 19), **pengurangan poin tanpa batas + daftar catatan per tanggal untuk mencegah pencatatan ganda** (bagian 20), dan **sertifikat siswa menjadi 2 halaman: surat pernyataan + deskripsi penilaian** (bagian 21). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
+> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16), serta **skala predikat 8 tingkat + username siswa untuk login** (bagian 17), **QR kartu berisi username + saran otomatis + bunyi bip pada scan** (bagian 18), **username bebas + saran siswa di seluruh halaman + Rincian angka disederhanakan** (bagian 19), **pengurangan poin tanpa batas + daftar catatan per tanggal untuk mencegah pencatatan ganda** (bagian 20), dan **sertifikat siswa menjadi 2 halaman: surat pernyataan + deskripsi penilaian** (bagian 21), serta **level penanganan siswa bermasalah untuk Guru BK** (bagian 22). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
 
 ---
 
@@ -34,6 +34,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | **Tahap 4 — Semester** | `pages/admin/sertifikat.php`: tambah semester, aktifkan (skor kembali 0), **tutup periode input**, buka kembali. `cek_input_semester()` membekukan catat poin, scan, izin, dan penilaian bulanan saat periode tertutup |
 | **Tahap 4 — Sertifikat** | Penerbitan per kelas/semua, kode **`SDP-TAHUNSEM-NIS-ACAK4`**, snapshot `data_json` yang tidak berubah, antrean WA, pembatalan dengan alasan + pelaku + waktu. `pages/umum/cetak_sertifikat.php` kini menghasilkan **2 halaman A4 landscape**: halaman 1 **surat pernyataan** *"Raport Penilaian Karakter Siswa ini diberikan kepada … dengan nilai rata-rata karakter …"* (logo, QR verifikasi, tanda tangan), halaman 2 **deskripsi penilaian** (tabel 6 aspek + keterangan), lihat **bagian 21**. Tombol cetak siswa/wali hanya aktif saat status `terbit` **dan** semester sudah berganti; sebelumnya sertifikat hanya bisa dilihat (bagian 16). `verifikasi.php` kini menyediakan pembatalan khusus admin |
 | **Tahap 4 — BK & kepsek** | `pages/bk/beranda.php`, `pages/kepsek/beranda.php` (**hanya baca**), `pages/bk/tindak_lanjut.php` (tindak lanjut + poin positif opsional), `pages/umum/laporan.php` (ringkasan per kelas/per aspek + unduh XLSX 3 lembar) |
+| **BK — Siswa bermasalah (§22)** | `pages/bk/penanganan.php` + `pages/bk/penanganan_detail.php`: daftar siswa berdasar riwayat pelanggaran, **level L1–L4** otomatis/manual, status `baru/proses/selesai`, tahap & penanggung jawab, jejak perubahan level, dan halaman detail per siswa |
 | **Tahap 5 — Portal wali** | `pages/wali/beranda.php`: hanya baca ringkasan anaknya (skor 6 aspek, kehadiran bulan ini, sertifikat, kartu QR). Admin menghubungkan akun lewat **Data siswa → Akun portal wali murid** |
 | **Pustaka QR lokal** | `public/js/qrcode.min.js` (qrcode-generator, MIT), `public/js/html5-qrcode.min.js` (Apache-2.0), `public/js/qr-sidipa.js`. Disertakan sebagai berkas statis, di-precache service worker, sehingga cetak dan scan tetap berfungsi tanpa akses CDN |
 | **Ekspor XLSX murni PHP** | `app/xlsx.php` menulis OOXML/ZIP sendiri (tanpa Composer, tanpa `ZipArchive`): header tebal + beku, filter, lebar kolom, banyak lembar, angka sebagai sel numerik. `csv_keluar()` sudah dihapus; tidak ada lagi unduhan CSV pada laporan |
@@ -143,6 +144,7 @@ sidipa/
 │   ├── laporan.php           # Rekap kehadiran, ringkasan per kelas, grafik mingguan
 │   ├── xlsx.php              # Penulis XLSX/OOXML murni PHP (tanpa Composer)
 │   ├── sertifikat.php        # Penutupan periode, snapshot, terbit/batal sertifikat
+│   ├── penanganan.php        # Level L1-L4 penanganan siswa bermasalah (bagian 22)
 │   ├── wa.php                # WaClient adapter OpenWA + antrean
 │   ├── ikon.php              # Pustaka SVG inline (tanpa emoji)
 │   └── layout.php            # Header, sidebar, navigasi bawah, flash
@@ -150,7 +152,7 @@ sidipa/
 │   ├── admin/                # dashboard, siswa, kelas, kartu, hari_libur, sertifikat, pengguna, katalog, impor, cron, WA, log
 │   ├── guru/                 # beranda, catat_poin, catat_banyak, riwayat, scan, pembinaan, izin, penilaian, banding
 │   ├── siswa/                # beranda, riwayat, banding, kartu, sertifikat
-│   ├── bk/                   # beranda, tindak_lanjut
+│   ├── bk/                   # beranda, tindak_lanjut, penanganan, penanganan_detail
 │   ├── kepsek/               # beranda (hanya baca)
 │   ├── wali/                 # beranda (hanya baca ringkasan anak)
 │   └── umum/                 # beranda, siswa, rekap, rekap_kehadiran, laporan, cetak_sertifikat, notifikasi
@@ -224,6 +226,8 @@ Pesan **tidak dikirim saat scan**; scan memasukkan baris ke `notifikasi_wa` deng
 - [x] QR dibuat dan dipindai tanpa CDN, tersedia offline lewat service worker — `public/js/qr*.js`
 - [x] Mode **catat banyak siswa sekaligus untuk satu kejadian** (§10) dengan transaksi all-or-nothing + daftar catatan per tanggal (tanpa cap harian, bagian 20) — `pages/guru/catat_banyak.php`
 - [x] Dashboard siswa memuat **grafik perkembangan mingguan** SVG inline 8 minggu (§10), hanya angka agregat tanpa nama pencatat
+- [x] **Level penanganan siswa bermasalah untuk Guru BK (§22)**: daftar berbasis riwayat pelanggaran, L1–L4 otomatis & manual, status/tahap/penanggung jawab, jejak perubahan, dan detail per siswa — `pages/bk/penanganan.php`, `pages/bk/penanganan_detail.php`
+- [x] Uji runtime bagian 22: **314/314** pemeriksaan (level otomatis, naik/turun level, jejak riwayat, detail siswa, hak akses, privasi, dan simulasi tabel belum dimigrasi)
 - [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **18/18** uji tambahan + **55/55** uji pembaruan (termasuk sliding 30 hari) + **35/35** uji fitur siswa + **52/52** uji predikat & username + **61/61** uji scan/QR/saran + **92/92** uji username bebas & saran siswa + **51/51** uji tanpa batas & riwayat harian = **503/503** lulus pada preview PHP 8.3 + MySQL 5.7
 
 ---
@@ -298,9 +302,10 @@ Semua URL PWA relatif terhadap lokasi aplikasi: manifest memakai `scope: "./"`, 
 | Sertifikat salah | Admin membatalkan lewat daftar sertifikat **atau** halaman verifikasi publik, wajib alasan. Status publik berubah jadi *dibatalkan* dan tombol cetak nonaktif |
 | Semester baru | **Tambah semester** → **Aktifkan**. Skor kembali 0 karena semua perhitungan memakai `semester_id`; data lama tetap tersimpan |
 | Pendampingan BK | **BK → Tindak Lanjut**: pilih siswa, isi pemicu/tindakan/status; centang poin positif bila ada kegiatan perbaikan |
+| Siswa bermasalah | **BK → Siswa Bermasalah**: lihat daftar berbasis pelanggaran, tetapkan/ubah **level L1–L4**, status, tahap & penanggung jawab; buka **Detail** untuk riwayat pelanggaran dan jejak perubahan level (bagian 22) |
 | Wali murid | Buat akun peran **Wali murid** di *Pengguna*, tautkan di *Data siswa*. Portal hanya menampilkan ringkasan anaknya |
 
-**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **64 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak, serta **503 pemeriksaan fungsional lulus (126 + 13 + 18 + 55 + 35 + 52 + 61 + 92 + 51)**, termasuk uji degradasi saat kolom `foto` belum ada, uji 8 batas predikat, uji QR username/saran otomatis/bunyi, uji username bebas + saran siswa di delapan halaman, dan uji pelanggaran −25 tanpa batas + privasi endpoint riwayat harian. **Bagian 21** divalidasi terpisah dengan **81/81 pemeriksaan** pada preview PHP 8.3 + MySQL 5.7 yang dibangun ulang: struktur 2 halaman, kalimat pernyataan, nilai rata-rata karakter, fallback sertifikat lama, penahanan cetak siswa/wali, pembukaan cetak setelah semester berganti, sertifikat dibatalkan, verifikasi publik, dan snapshot versi 2 dari database nyata.
+**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **67 file PHP tanpa galat parsing** (termasuk 3 berkas baru bagian 22), seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak, serta **503 pemeriksaan fungsional lulus (126 + 13 + 18 + 55 + 35 + 52 + 61 + 92 + 51)**, termasuk uji degradasi saat kolom `foto` belum ada, uji 8 batas predikat, uji QR username/saran otomatis/bunyi, uji username bebas + saran siswa di delapan halaman, dan uji pelanggaran −25 tanpa batas + privasi endpoint riwayat harian. **Bagian 22** divalidasi dengan **314/314 pemeriksaan** pada preview yang sama (level otomatis, penetapan manual naik/turun, jejak riwayat, detail siswa, filter, hak akses, validasi CSRF/level/tanggal, privasi, dan ketahanan instalasi lama tanpa migrasi). **Bagian 21** divalidasi terpisah dengan **81/81 pemeriksaan** pada preview PHP 8.3 + MySQL 5.7 yang dibangun ulang: struktur 2 halaman, kalimat pernyataan, nilai rata-rata karakter, fallback sertifikat lama, penahanan cetak siswa/wali, pembukaan cetak setelah semester berganti, sertifikat dibatalkan, verifikasi publik, dan snapshot versi 2 dari database nyata.
 
 ---
 
@@ -787,4 +792,65 @@ Sumbernya `ringkasan_skor_siswa()` di `app/skor.php`: **rata-rata persentase dar
 ### 21.5 Uji coba
 
 Suite `.preview/tmpjs/uji_sertifikat_2hal.py` (**81/81**) memeriksa markup & CSS dua halaman, kalimat pernyataan berikut nama/nilai rata-rata/predikat, enam baris aspek pada halaman 2, QR dan dua tanda tangan hanya di halaman 1, fallback sertifikat versi 1 (80,0% / B), penahanan cetak siswa & wali, pembukaan cetak setelah semester aktif berganti, sertifikat dibatalkan tanpa kertas tercetak, verifikasi publik, halaman daftar sertifikat untuk tiga peran, dan `snapshot_sertifikat()` versi 2 yang dijalankan terhadap database nyata. **64 berkas PHP tanpa galat parsing**. Suite ini berada di `.preview/` yang diabaikan Git. Regresi 503/503 pada bagian 20 berasal dari lingkungan uji lama; lingkungan preview dibangun ulang pada bagian 21 sehingga regresi itu tidak diulang, namun halaman-halaman yang terdampak diverifikasi langsung lewat suite di atas.
+
+---
+
+## 22. Level penanganan siswa bermasalah (Guru BK)
+
+### 22.1 Latar & keputusan
+
+Sebelumnya BK sudah punya **Dashboard BK** (daftar *Siswa perlu pembinaan* berdasar **persentase aspek < 60%**) dan **Tindak Lanjut** (`pemicu`, `status baru/proses/selesai`, `tindak_lanjut`). Yang belum ada adalah **tingkatan/level kasus** dan **satu tempat untuk melihat siswa bermasalah beserta seluruh penanganannya**.
+
+Sesuai pilihan pada sesi ini:
+
+- **Level penanganan L1–L4** (bukan peran baru, bukan sekadar halaman kosong).
+- Sumber *"siswa bermasalah"* = **riwayat pelanggaran** pada semester berjalan: akumulasi poin negatif aktif + pelanggaran tingkat sedang/berat. **Bukan** ambang skor aspek 60% (aturan lama tetap dipertahankan di menu *Siswa Pembinaan*), bukan peringkat skor terendah.
+- Penanganan mencakup **status + catatan**, **tahap bertingkat + penanggung jawab**, **kenaikan/penurunan level berjejak**, dan **halaman detail per siswa**.
+
+### 22.2 Aturan level
+
+| Level | Nama | Penanggung jawab bawaan | Tahap bawaan | Masuk otomatis bila |
+| --- | --- | --- | --- | --- |
+| **L1** | Pembinaan awal | Wali kelas | Teguran dan bimbingan ringan | ada poin negatif (1–9) |
+| **L2** | Konseling BK | Guru BK | Konseling individual + kontrak perilaku ringan | ≥10 poin negatif **atau** ada pelanggaran tingkat `sedang` |
+| **L3** | Pendampingan intensif | Guru BK + wali murid | Panggilan wali murid + pemantauan mingguan | ≥25 poin negatif **atau** ≥1 pelanggaran tingkat `berat` |
+| **L4** | Penanganan pimpinan | Kepala sekolah | Pembinaan pimpinan sesuai tata tertib | ≥50 poin negatif **atau** ≥2 pelanggaran `berat` |
+
+Yang dihitung hanya `catatan_poin` **berpoin negatif dan berstatus `aktif`** pada semester berjalan (semua sumber: manual, sistem/scan, berkala). Catatan **dibatalkan tidak menaikkan level**, tetapi tetap ditampilkan di halaman detail agar tidak dicatat ulang. Pelanggaran berat bawaan −15/−20/−25 (`JUJ_AMBIL`, `TIM_BULLYING`, `DIS_KELAHI`, dll.) otomatis menaikkan ke L3; dua pelanggaran berat ke L4.
+
+**Level efektif** = penetapan terakhir BK bila ada, selain itu **level otomatis**. BK bebas menaikkan **atau menurunkan** level lewat form; halaman menandai bila level efektif berbeda dari rekomendasi otomatis.
+
+### 22.3 Tampilan & alur
+
+- Menu samping BK bertambah **Siswa Bermasalah**; Dashboard BK mendapat 2 kartu angka (*Siswa bermasalah*, *Level L3–L4*), tautan cepat, dan tabel 10 kasus teratas.
+- **`pages/bk/penanganan.php`**: 5 kartu ringkasan, penjelasan aturan level, form **Tetapkan / ubah level** (siswa, L1–L4, status, tanggal, tahap, penanggung jawab, catatan), filter level + pencarian nama/NIS/kelas, tabel daftar (poin negatif, jumlah pelanggaran berat, **level otomatis**, **level penanganan**, status, penanggung jawab, tautan Detail), dan **Riwayat perubahan penanganan** 15 entri terakhir.
+- **`pages/bk/penanganan_detail.php`**: identitas siswa, 4 kartu angka, penanganan berjalan (tahap, penanggung jawab, catatan, alasan level otomatis), **ringkasan poin per aspek**, **seluruh riwayat pelanggaran** (tanggal, jam, kejadian, aspek, poin, tingkat, sumber, status), **riwayat level penanganan** (jejak naik/turun), dan **catatan tindak lanjut BK** dari tabel `pembinaan`.
+- Setiap penyimpanan form menambah **satu baris baru** di `penanganan_siswa` — bukan menimpa — sehingga riwayat perubahan level selalu utuh. Status memakai enum yang sama dengan Tindak Lanjut (`baru/proses/selesai`).
+
+### 22.4 Privasi & keamanan
+
+- Kedua halaman memakai `auth_wajib(['bk','admin'])`; semua POST wajib **CSRF**, siswa harus aktif, level 1–4, status valid, tanggal `YYYY-MM-DD` valid.
+- Helper di `app/penanganan.php` **tidak pernah** memilih `pencatat_id`, nama pencatat, `keterangan` bebas, `bukti_path`, atau nomor WA. Kolom `dicatat_oleh` hanya disimpan untuk jejak audit internal dan tidak ditampilkan ke BK. Identitas pencatat tetap hanya bisa dibaca admin lewat `lihat_pencatat()`.
+- Instalasi lama yang belum menjalankan migrasi **tidak rusak**: `penanganan_tabel_ada()` menangani tabel yang belum ada, daftar siswa tetap tampil, dan muncul pesan berisi nama berkas migrasi. `install.php` menambah pemeriksaan tabel ini.
+
+### 22.5 Berkas & database yang perlu diganti
+
+| Berkas | Wajib? | Isi perubahan |
+| --- | --- | --- |
+| `app/penanganan.php` **(baru)**, `app/bootstrap.php` | **WAJIB** | helper level L1–L4 + pemuatan helper |
+| `pages/bk/penanganan.php` **(baru)**, `pages/bk/penanganan_detail.php` **(baru)** | **WAJIB** | daftar, penetapan level, riwayat, detail per siswa |
+| `database.sql`, **`contoh/migrasi_penanganan_bk.sql` (baru)** | **WAJIB untuk instalasi lama** | tabel `penanganan_siswa` |
+| `app/layout.php`, `pages/bk/beranda.php`, `install.php` | Disarankan | menu BK, kartu/tabel dashboard, pemeriksaan install |
+| `contoh/README.md`, `README.md` | Disarankan | dokumentasi |
+
+> **Kali ini ADA perubahan database** (berbeda dengan bagian 19–21): satu tabel baru.
+>
+> - **Instalasi baru**: cukup impor `database.sql` terbaru — tabel sudah ada.
+> - **Instalasi lama**: jalankan **`contoh/migrasi_penanganan_bk.sql`** satu kali lewat phpMyAdmin. Isinya `CREATE TABLE IF NOT EXISTS penanganan_siswa` — **tidak ada `ALTER TABLE`**, tidak mengubah tabel/data lama, aman dijalankan ulang (`IF NOT EXISTS`). Tanpa itu halaman tetap bisa dibuka tetapi penetapan level belum bisa disimpan.
+>
+> Kolom tabel: `id, siswa_id, semester_id, level, status, tahap, penanggung_jawab, catatan, dicatat_oleh, tanggal, dibuat_pada` + 3 indeks dan 3 kunci asing.
+
+### 22.6 Uji coba
+
+Suite `.preview/tmpjs/uji_penanganan_bk.py` (**314/314**) memeriksa matriks 12 kombinasi level otomatis (0, 1–9, ≥10, ≥25, ≥50 poin dan pelanggaran sedang/berat), daftar siswa bermasalah yang mengabaikan poin positif serta catatan dibatalkan, penetapan level manual **turun L4→L2 lalu naik L2→L4** berikut jejak riwayatnya (3 baris tidak saling menimpa), filter level/NIS/nama, halaman detail per siswa (riwayat pelanggaran termasuk yang dibatalkan, poin per aspek, tindak lanjut BK lama), 404 siswa tak ditemukan, penolakan akses siswa/guru/wali (403) dan tamu, validasi tanpa CSRF / level 0 & 9 / status asing / tanggal invalid / siswa asing, log audit, serta tidak adanya identitas pencatat, keterangan bebas, bukti, atau nomor WA dalam HTML. Bagian terakhir mensimulasikan **instalasi lama yang belum dimigrasi** dengan menghapus sementara tabel `penanganan_siswa`: halaman tetap 200, peringatan dan nama berkas migrasi tampil, POST ditolak dengan pesan yang jelas, lalu tabel dipulihkan. **67 berkas PHP tanpa galat parsing** dan seluruh skrip JS di `public/js/` lolos `node --check`. Suite berada di `.preview/` yang diabaikan Git. Suite regresi **bagian 21** (`uji_sertifikat_2hal.py`, **81/81**) dijalankan ulang setelah seluruh perubahan bagian 22 dan tetap lulus, sehingga sertifikat 2 halaman tidak terdampak. Regresi **503/503** bagian 20 berasal dari lingkungan uji lama dan tidak diulang di preview yang dibangun ulang ini.
 

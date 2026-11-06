@@ -7,6 +7,7 @@ Berkas di folder ini **hanya untuk uji coba**. Semua nama, NIS, dan nomor WhatsA
 | `siswa_contoh.csv` | 20 baris siswa dengan header `nis,username,nama,jenis_kelamin,kelas,nama_wali,no_wa_wali`; dipakai untuk mencoba menu **Admin → Impor CSV**. Kolom `username` opsional: bila kosong dibuat otomatis dari nama |
 | `data_contoh.sql` | 3 kelas (`X TKJ 1`, `XI TKJ 1`, `XII TKJ 1`), 3 akun guru sebagai wali kelas, 20 akun siswa + data siswa, dan pemetaan `guru_kelas` |
 | `migrasi_username_siswa.sql` | `UPDATE` 20 akun siswa contoh dari username NIS menjadi username dari nama. Untuk data asli, pakai tombol **Buatkan username massal** di menu Data siswa |
+| `migrasi_penanganan_bk.sql` | **Bukan data contoh**, melainkan `CREATE TABLE penanganan_siswa` untuk instalasi lama yang ingin memakai menu **Siswa Bermasalah & level penanganan BK** (bagian 22). Instalasi baru sudah mendapat tabel ini dari `database.sql` |
 
 ## Cara pakai
 

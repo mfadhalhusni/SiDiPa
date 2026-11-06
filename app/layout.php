@@ -27,6 +27,7 @@ function menu_samping_utama(string $peran): array
     if ($peran === 'bk') {
         return [
             ['label' => 'Dashboard BK', 'url' => 'pages/bk/beranda.php', 'ikon' => 'beranda'],
+            ['label' => 'Siswa Bermasalah', 'url' => 'pages/bk/penanganan.php', 'ikon' => 'peringatan'],
             ['label' => 'Siswa Pembinaan', 'url' => 'pages/guru/pembinaan.php', 'ikon' => 'pembinaan'],
             ['label' => 'Tindak Lanjut', 'url' => 'pages/bk/tindak_lanjut.php', 'ikon' => 'catatan'],
             ['label' => 'Laporan', 'url' => 'pages/umum/laporan.php', 'ikon' => 'grafik'],
