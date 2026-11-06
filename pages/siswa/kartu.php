@@ -27,8 +27,8 @@ $namaSekolah = (string) pengaturan('nama_sekolah', 'SMK SiDiPa');
 <body class="cetak-kartu">
   <div class="cetak-alat">
     <p class="petunjuk-cetak">
-      Tunjukkan QR ini kepada guru/petugas saat scan masuk dan sholat. QR berisi token unik, bukan NIS.
-      Baris <strong>Login</strong> adalah username untuk masuk ke akun siswa (bukan NIS/NISN) dan juga isi QR kartu. Kartu lama berisi token acak sudah tidak berlaku; minta admin mencetak ulang.
+      Tunjukkan QR ini kepada guru/petugas saat scan masuk dan sholat. QR berisi username siswa (bukan NIS, bukan token lama).
+      Baris <strong>Login</strong> adalah username untuk masuk ke akun siswa dan juga isi QR kartu; karakternya bebas sesuai yang dibuat admin. Kartu lama berisi token acak sudah tidak berlaku; minta admin mencetak ulang.
     </p>
     <div class="baris-tombol">
       <?php if ($siswa !== null): ?>

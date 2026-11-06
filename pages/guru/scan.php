@@ -78,14 +78,13 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
   <section class="kartu">
     <p class="label-kecil">Cari siswa (manual)</p>
     <form id="form-manual" autocomplete="off" data-lewati-muat="1">
-      <div class="form-baris pembungkus-saran">
-        <label for="cari-siswa">NIS atau nama siswa</label>
-        <input class="input" id="cari-siswa" name="cari" type="text" placeholder="Misal 20260100 atau Alya" autocomplete="off"
-               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="saran-siswa" aria-haspopup="listbox" required>
-        <input type="hidden" id="nis-terpilih" name="nis" value="">
-        <div class="saran-siswa" id="saran-siswa" role="listbox" aria-label="Saran siswa" hidden></div>
-      </div>
-      <p class="bantuan" id="siswa-terpilih" style="margin-top:8px">Ketik NIS atau nama siswa, lalu pilih dari saran.</p>
+      <?php kotak_cari_siswa([
+          'id' => 'cari-siswa', 'id_nilai' => 'nis-terpilih', 'id_saran' => 'saran-siswa',
+          'id_petunjuk' => 'siswa-terpilih', 'label' => 'NIS atau nama siswa',
+          'nama' => 'nis', 'nilai_dari' => 'nis', 'tampil' => 'nis',
+          'placeholder' => 'Misal 20260100 atau Alya', 'validasi' => '0',
+          'bantuan' => 'Ketik NIS atau nama siswa, lalu pilih dari saran.',
+      ]); ?>
       <div class="form-aksi"><button class="tombol tombol-utama" type="submit"><?= ikon('scan', 20) ?> Catat <?= e($modeValid[$mode]) ?></button></div>
     </form>
     <div class="garis-pemisah"></div>
@@ -122,7 +121,6 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
   'use strict';
   var MODE = <?= json_encode($mode, JSON_UNESCAPED_SLASHES) ?>;
   var ENDPOINT = <?= json_encode(url('api/scan.php'), JSON_UNESCAPED_SLASHES) ?>;
-  var ENDPOINT_CARI = <?= json_encode(url('api/cari_siswa.php'), JSON_UNESCAPED_SLASHES) ?>;
   var judul = document.getElementById('hasil-judul');
   var rinci = document.getElementById('hasil-rinci');
   var kotak = document.getElementById('hasil-scan');
@@ -239,120 +237,29 @@ halaman_atas($modeValid[$mode], 'Pemindaian · waktu server Asia/Jakarta', ['nav
     });
   }
 
-  /* ---------- Saran otomatis: satu input untuk NIS atau nama ---------- */
+  /* ---------- Saran otomatis memakai komponen BERSAMA ----------
+     public/js/cari-siswa.js menangani debounce, keyboard, ARIA, dan
+     pemilihan siswa. Halaman ini hanya mengurus pengiriman scan + bunyi. */
   var inputCari = document.getElementById('cari-siswa');
   var nisTerpilih = document.getElementById('nis-terpilih');
-  var kotakSaran = document.getElementById('saran-siswa');
-  var infoTerpilih = document.getElementById('siswa-terpilih');
   var formManual = document.getElementById('form-manual');
-  var pilihan = [];
-  var indeksAktif = -1;
-  var timerCari = null;
-  var urutanCari = 0;
-
-  function tutupSaran() {
-    kotakSaran.hidden = true;
-    kotakSaran.innerHTML = '';
-    indeksAktif = -1;
-    inputCari.setAttribute('aria-expanded', 'false');
-  }
-  function sorot(i) {
-    var anak = kotakSaran.querySelectorAll('[role="option"]');
-    for (var j = 0; j < anak.length; j += 1) {
-      anak[j].classList.toggle('saran-aktif', j === i);
-      anak[j].setAttribute('aria-selected', j === i ? 'true' : 'false');
-    }
-    indeksAktif = i;
-    if (i >= 0 && anak[i]) { anak[i].scrollIntoView({ block: 'nearest' }); }
-  }
-  function renderSaran(daftar) {
-    pilihan = daftar || [];
-    kotakSaran.innerHTML = '';
-    indeksAktif = -1;
-    if (pilihan.length === 0) { tutupSaran(); return; }
-    for (var i = 0; i < pilihan.length; i += 1) {
-      var s = pilihan[i];
-      var opsi = document.createElement('button');
-      opsi.type = 'button';
-      opsi.className = 'saran-opsi';
-      opsi.setAttribute('role', 'option');
-      opsi.setAttribute('aria-selected', 'false');
-      opsi.dataset.indeks = String(i);
-      opsi.innerHTML = '<strong></strong><span></span>';
-      opsi.querySelector('strong').textContent = s.nama || 'Siswa';
-      opsi.querySelector('span').textContent = 'NIS ' + (s.nis || '-') + ' · ' + (s.kelas || '-');
-      kotakSaran.appendChild(opsi);
-    }
-    kotakSaran.hidden = false;
-    inputCari.setAttribute('aria-expanded', 'true');
-  }
-  function pilih(s) {
-    nisTerpilih.value = s.nis || '';
-    inputCari.value = s.nis || '';
-    infoTerpilih.textContent = 'Dipilih: ' + (s.nama || 'Siswa') + ' · NIS ' + (s.nis || '-') + ' · ' + (s.kelas || '-');
-    infoTerpilih.classList.add('teks-sukses');
-    tutupSaran();
-  }
-  function cariSiswa() {
-    var q = inputCari.value.trim();
-    if (q.length < 2) { tutupSaran(); return; }
-    var urutan = ++urutanCari;
-    window.SiDiPa.get(ENDPOINT_CARI, { q: q }).then(function (res) {
-      if (urutan !== urutanCari) { return; }
-      renderSaran((res && res.siswa) || []);
-    }).catch(function () { tutupSaran(); });
-  }
-  inputCari.addEventListener('input', function () {
-    nisTerpilih.value = '';
-    infoTerpilih.classList.remove('teks-sukses');
-    infoTerpilih.textContent = 'Ketik NIS atau nama siswa, lalu pilih dari saran.';
-    window.clearTimeout(timerCari);
-    timerCari = window.setTimeout(cariSiswa, 180);
-  });
-  kotakSaran.addEventListener('click', function (e) {
-    var opsi = e.target.closest ? e.target.closest('[role="option"]') : null;
-    if (!opsi) { return; }
-    var i = parseInt(opsi.dataset.indeks, 10);
-    if (pilihan[i]) { pilih(pilihan[i]); inputCari.focus(); }
-  });
-  inputCari.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { tutupSaran(); return; }
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      if (kotakSaran.hidden || pilihan.length === 0) { return; }
-      e.preventDefault();
-      var berikut = e.key === 'ArrowDown'
-        ? (indeksAktif + 1) % pilihan.length
-        : (indeksAktif <= 0 ? pilihan.length - 1 : indeksAktif - 1);
-      sorot(berikut);
-      return;
-    }
-    if (e.key === 'Enter' && indeksAktif >= 0 && pilihan[indeksAktif]) {
-      e.preventDefault();
-      pilih(pilihan[indeksAktif]);
-    }
-  });
-  document.addEventListener('click', function (e) {
-    if (!formManual.contains(e.target)) { tutupSaran(); }
-  });
 
   formManual.addEventListener('submit', function (e) {
     e.preventDefault();
-    if (indeksAktif >= 0 && pilihan[indeksAktif]) { pilih(pilihan[indeksAktif]); }
-    var teks = inputCari.value.trim();
-    if (teks === '') { tutupSaran(); return; }
     var nis = nisTerpilih.value.trim();
     if (nis !== '') { kirim({ nis: nis }); return; }
-    if (pilihan.length === 1) { pilih(pilihan[0]); kirim({ nis: pilihan[0].nis }); return; }
-    /* Enter tanpa memilih: cari sekali lagi, pakai bila tepat satu siswa. */
-    window.SiDiPa.get(ENDPOINT_CARI, { q: teks }).then(function (res) {
-      var daftar = (res && res.siswa) || [];
+    var teks = inputCari.value.trim();
+    if (teks === '') { return; }
+    /* Selalu tanya ulang ke server: Enter tidak boleh memakai saran usang
+       bila tiba sebelum debounce 180 ms selesai. */
+    window.SiDiPa.cariSiswa(inputCari).then(function (daftar) {
       if (daftar.length === 1) {
-        pilih(daftar[0]);
-        kirim({ nis: daftar[0].nis });
+        window.SiDiPa.pilihSiswa(inputCari, daftar[0]);
+        kirim({ nis: nisTerpilih.value.trim() });
       } else if (daftar.length === 0) {
         tampil(false, 'Siswa tidak ditemukan', 'Coba NIS atau nama lain, atau pilih dari saran.');
       } else {
-        renderSaran(daftar);
+        window.SiDiPa.tampilSaran(inputCari, daftar);
         tampil(false, 'Beberapa siswa cocok', 'Pilih salah satu siswa dari daftar saran.');
       }
     }).catch(function () {

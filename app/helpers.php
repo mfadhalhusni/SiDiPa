@@ -482,45 +482,57 @@ function tanggal_valid(string $nilai): bool
 }
 
 /* --------------------------------------------------------------------------
- | USERNAME SISWA (login tidak lagi memakai NIS/NISN)
+ | USERNAME SISWA (login & QR memakai username, bukan NIS/NISN)
  | --------------------------------------------------------------------------
- | `pengguna.username` tetap satu-satunya sumber kebenaran. Untuk akun siswa
- | nilainya kini terpisah dari `siswa.nis`: admin dapat mengisinya sendiri
- | (form Data siswa / kolom `username` pada CSV), dan bila dikosongkan sistem
- | membuatnya otomatis dari dua kata pertama nama. NIS tetap dipakai untuk
- | identitas, kartu QR, pencarian, dan kode sertifikat.
+ | `pengguna.username` tetap satu-satunya sumber kebenaran untuk login dan
+ | ISI QR KARTU. Untuk akun siswa nilainya terpisah dari `siswa.nis`: admin
+ | dapat mengisinya sendiri (form Data siswa / kolom `username` pada CSV)
+ | dengan KARAKTER BEBAS — angka semua, huruf semua, huruf besar, spasi,
+ | maupun simbol — dan bila dikosongkan sistem membuatnya otomatis dari dua
+ | kata pertama nama. NIS tetap dipakai untuk identitas, pencarian manual,
+ | dan kode sertifikat.
+ | Pembatasan yang tersisa murni teknis: karakter kontrol dibuang, spasi di
+ | pinggir dipangkas, dan panjang dibatasi 60 karakter sesuai kolom DB.
  */
 
-/** Rapikan username: huruf kecil, hanya a-z 0-9 titik, strip, dan garis bawah. */
+/** Rapikan username: buang karakter kontrol, pangkas pinggir, batasi 60. */
 function username_siswa_bersih(string $nilai): string
 {
-    $nilai = strtolower(trim($nilai));
-    $nilai = (string) preg_replace('/[^a-z0-9._-]/', '', $nilai);
-    $nilai = trim($nilai, '.-_');
+    $nilai = (string) preg_replace('/[\x00-\x1F\x7F]/', '', $nilai);
+    $nilai = trim($nilai);
+    if (function_exists('mb_substr')) {
+        return mb_substr($nilai, 0, 60, 'UTF-8');
+    }
     return substr($nilai, 0, 60);
+}
+
+/** Panjang username dalam karakter (bukan byte), aman untuk karakter non-ASCII. */
+function username_siswa_panjang(string $nilai): int
+{
+    return function_exists('mb_strlen') ? mb_strlen($nilai, 'UTF-8') : strlen($nilai);
+}
+
+/** Huruf kecil unicode untuk perbandingan unik yang peka huruf besar/kecil. */
+function username_siswa_kunci(string $nilai): string
+{
+    return function_exists('mb_strtolower')
+        ? mb_strtolower($nilai, 'UTF-8')
+        : strtolower($nilai);
 }
 
 /**
  * Pesan galat bila username siswa tidak sah; string kosong berarti sah.
- * Username tidak boleh hanya angka supaya tidak menyerupai / kembali ke NIS.
+ * Tidak ada lagi larangan "harus ada huruf", "huruf kecil", atau minimal
+ * 3 karakter: angka semua maupun huruf semua sama-sama diperbolehkan.
  */
 function username_siswa_sah(string $nilai): string
 {
     $bersih = username_siswa_bersih($nilai);
     if ($nilai !== '' && $bersih !== $nilai) {
-        return 'Username hanya boleh huruf kecil, angka, titik, strip, atau garis bawah.';
+        return 'Username mengandung karakter kontrol atau lebih dari 60 karakter.';
     }
-    if (strlen($bersih) < 3) {
-        return 'Username siswa minimal 3 karakter.';
-    }
-    if (strlen($bersih) > 60) {
-        return 'Username siswa maksimal 60 karakter.';
-    }
-    if (!preg_match('/[a-z]/', $bersih)) {
-        return 'Username siswa harus memuat huruf, tidak boleh hanya angka seperti NIS.';
-    }
-    if (!preg_match('/^[a-z0-9._-]+$/', $bersih)) {
-        return 'Format username siswa tidak valid.';
+    if ($bersih === '') {
+        return 'Username siswa tidak boleh kosong.';
     }
     return '';
 }
@@ -550,11 +562,11 @@ function username_siswa_unik(string $dasar, int $kecualiId = 0, array $terpakai 
     }
     $dipakai = [];
     foreach ($terpakai as $nilai) {
-        $dipakai[strtolower((string) $nilai)] = true;
+        $dipakai[username_siswa_kunci((string) $nilai)] = true;
     }
     $kandidat = $dasar;
     for ($i = 1; $i <= 1000; $i++) {
-        $ada = isset($dipakai[strtolower($kandidat)]) || db_satu(
+        $ada = isset($dipakai[username_siswa_kunci($kandidat)]) || db_satu(
             'SELECT id FROM pengguna WHERE username = ? AND id <> ? LIMIT 1',
             [$kandidat, $kecualiId]
         ) !== null;
@@ -562,7 +574,11 @@ function username_siswa_unik(string $dasar, int $kecualiId = 0, array $terpakai 
             return $kandidat;
         }
         $akhiran = (string) ($i + 1);
-        $kandidat = substr($dasar, 0, 60 - strlen($akhiran)) . $akhiran;
+        $potong = 60 - strlen($akhiran);
+        $pangkas = function_exists('mb_substr')
+            ? mb_substr($dasar, 0, $potong, 'UTF-8')
+            : substr($dasar, 0, $potong);
+        $kandidat = $pangkas . $akhiran;
     }
     throw new RuntimeException('Username siswa tidak dapat dibuat unik. Hubungi admin.');
 }

@@ -28,14 +28,17 @@ $opsi = [
     'sangat_baik' => 'Sangat Baik (' . (int) pengaturan('penilaian_sangat_baik', '5') . ')',
 ];
 
-$siswa = daftar_siswa_untuk_guru();
-$terpilih = null;
-foreach ($siswa as $s) {
-    if ((int) $s['id'] === $siswaId) {
-        $terpilih = $s;
-        break;
-    }
-}
+/* Tidak lagi memuat seluruh daftar siswa: pencarian dilakukan di server
+   lewat api/cari_siswa.php, jadi siswa di luar batas 300 tetap bisa dibuka. */
+$jumlahSiswa = (int) db_nilai('SELECT COUNT(*) FROM siswa WHERE aktif = 1', [], 0);
+$terpilih = $siswaId > 0
+    ? db_satu(
+        'SELECT s.id, s.nis, s.nama, COALESCE(k.nama, \'-\') AS kelas
+         FROM siswa s LEFT JOIN kelas k ON k.id = s.kelas_id
+         WHERE s.id = ? AND s.aktif = 1',
+        [$siswaId]
+    )
+    : null;
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && $terpilih !== null) {
     csrf_wajib();
@@ -92,7 +95,7 @@ halaman_atas('Penilaian Bulanan', 'Semua siswa · ' . $bulan, ['nav' => 'siswa']
   <div class="pesan pesan-galat" role="alert"><?= ikon('peringatan', 20) ?><span><?= e($pesanGalat) ?></span></div>
 <?php endif; ?>
 
-<?php if ($siswa === []): ?>
+<?php if ($jumlahSiswa === 0): ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
     <span>Belum ada siswa aktif. Tambahkan siswa terlebih dahulu.</span></div>
 <?php else: ?>
@@ -100,21 +103,20 @@ halaman_atas('Penilaian Bulanan', 'Semua siswa · ' . $bulan, ['nav' => 'siswa']
     <span>Empat aspek non-otomatis dinilai per bulan. Unik per semester, siswa, aspek, dan bulan; mengubah nilai membatalkan catatan lama dan membuat catatan baru bersumber <code>berkala</code>.</span>
   </div>
 
-  <form class="kartu form-kartu" method="get" action="<?= e(url('pages/guru/penilaian.php')) ?>">
+  <form class="kartu form-kartu" method="get" action="<?= e(url('pages/guru/penilaian.php')) ?>" data-lewati-muat="1">
     <div class="form-grid">
       <div class="form-baris">
         <label for="bulan">Bulan</label>
         <input class="input" id="bulan" name="bulan" type="month" value="<?= e($bulan) ?>">
       </div>
-      <div class="form-baris">
-        <label for="siswa_id">Siswa</label>
-        <select class="input" id="siswa_id" name="siswa_id" required>
-          <option value="">— Pilih siswa —</option>
-          <?php foreach ($siswa as $s): ?>
-            <option value="<?= (int) $s['id'] ?>" <?= $siswaId === (int) $s['id'] ? 'selected' : '' ?>><?= e($s['nama']) ?> · <?= e($s['kelas']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
+      <?php kotak_cari_siswa([
+          'id' => 'cari-siswa-penilaian', 'label' => 'Siswa', 'nama' => 'siswa_id',
+          'nilai' => $siswaId > 0 ? (string) $siswaId : '',
+          'teks' => $terpilih !== null
+              ? $terpilih['nama'] . ' · ' . $terpilih['kelas'] : '',
+          'kirim' => '1', 'kelas_baris' => 'form-baris',
+          'bantuan' => 'Ketik NIS atau nama siswa, lalu pilih dari saran untuk langsung membuka nilainya.',
+      ]); ?>
     </div>
     <div class="form-aksi"><button class="tombol" type="submit"><?= ikon('cari', 20) ?> Buka</button></div>
   </form>

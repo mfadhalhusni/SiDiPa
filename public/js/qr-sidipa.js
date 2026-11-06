@@ -1,7 +1,7 @@
 /* ============================================================
  | SiDiPa — pembuat QR statis (tanpa CDN, aman untuk cetak offline).
  | Bergantung pada public/js/qrcode.min.js (qrcode-generator, MIT).
- | Cara pakai: <div data-qr="ISI_TOKEN_ATAU_URL"></div>
+ | Cara pakai: <div data-qr="USERNAME_SISWA"></div>
  | Hasil berupa SVG vektor agar tetap tajam saat dicetak A4/kartu.
  | ============================================================ */
 (function () {
@@ -15,6 +15,12 @@
       el.textContent = 'QR tidak tersedia';
       el.dataset.qrSelesai = '1';
       return;
+    }
+    /* Username siswa kini boleh memakai karakter bebas (termasuk non-ASCII).
+       Default qrcode-generator memotong tiap karakter ke 1 byte; pakai UTF-8
+       agar QR tetap memuat username utuh dan cocok dengan api/scan.php. */
+    if (window.qrcode.stringToBytesFuncs && window.qrcode.stringToBytesFuncs['UTF-8']) {
+      window.qrcode.stringToBytes = window.qrcode.stringToBytesFuncs['UTF-8'];
     }
     try {
       var q = window.qrcode(0, 'M');

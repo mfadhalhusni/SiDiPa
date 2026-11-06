@@ -11,7 +11,6 @@ $idGuru = (int) $pengguna['id'];
 $semesterId = (int) (semester_aktif()['id'] ?? 0);
 $pesanGalat = '';
 
-$siswa = daftar_siswa_untuk_guru();
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     csrf_wajib();
@@ -84,19 +83,11 @@ halaman_atas('Izin dan Sakit', 'Semua siswa aktif', ['nav' => 'siswa']);
     <span>Izin, sakit, dan udzur bersifat <strong>netral</strong>: tidak memotong poin, dan poin otomatis yang sudah terlanjur dibuat pada rentang tanggal dibatalkan.</span>
   </div>
 
-  <form class="kartu form-kartu" method="post" action="<?= e(url('pages/guru/izin.php')) ?>">
+  <form class="kartu form-kartu" method="post" action="<?= e(url('pages/guru/izin.php')) ?>" data-lewati-muat="1">
     <?= csrf_field() ?>
     <input type="hidden" name="aksi" value="tambah">
     <div class="form-grid">
-      <div class="form-baris lebar-penuh">
-        <label for="siswa_id">Siswa <span class="wajib">wajib</span></label>
-        <select class="input" id="siswa_id" name="siswa_id" required>
-          <option value="">— Pilih siswa —</option>
-          <?php foreach ($siswa as $s): ?>
-            <option value="<?= (int) $s['id'] ?>"><?= e($s['nama']) ?> · <?= e($s['nis']) ?> · <?= e($s['kelas']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
+      <?php kotak_cari_siswa(['label' => 'Siswa', 'nama' => 'siswa_id']); ?>
       <div class="form-baris">
         <label for="jenis">Jenis</label>
         <select class="input" id="jenis" name="jenis" required>

@@ -117,7 +117,7 @@ halaman_atas('Pengguna', 'Admin / Akses', ['nav' => 'profil']);
     <div class="form-grid">
       <div class="form-baris"><label for="username">Username <span class="wajib">wajib</span></label>
         <input class="input" id="username" name="username" value="<?= e($form['username']) ?>" required maxlength="60" autocomplete="off">
-        <p class="bantuan">Untuk akun siswa wajib memuat huruf dan <strong>tidak boleh berupa NIS/NISN</strong>. Lihat menu Data siswa untuk membuat username otomatis dari nama.</p></div>
+        <p class="bantuan">Untuk akun siswa <strong>karakter bebas</strong>: boleh angka semua, huruf semua, huruf besar, spasi, atau simbol (maksimal 60 karakter). Lihat menu Data siswa untuk membuat username otomatis dari nama.</p></div>
       <div class="form-baris"><label for="nama">Nama lengkap <span class="wajib">wajib</span></label>
         <input class="input" id="nama" name="nama" value="<?= e($form['nama']) ?>" required maxlength="120"></div>
       <div class="form-baris"><label for="peran">Peran</label>

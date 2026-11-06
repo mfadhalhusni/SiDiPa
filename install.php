@@ -81,18 +81,18 @@ try {
                 ? 'Kedelapan ambang A+/A/B+/B/B-/C+/C/D tersedia.'
                 : 'Baru ' . $predikatLengkap . ' dari 8 ambang. Jalankan SQL pada bagian 17 README untuk menambah predikat_bplus, predikat_bminus, dan predikat_cplus.'
         );
-        $siswaNis = (int) db_nilai(
+        $siswaKosong = (int) db_nilai(
             "SELECT COUNT(*) FROM pengguna p JOIN siswa s ON s.pengguna_id = p.id
-             WHERE p.peran = 'siswa' AND p.username REGEXP '^[0-9]+$'",
+             WHERE p.peran = 'siswa' AND (p.username IS NULL OR p.username = '')",
             [],
             0
         );
         tambah_cek(
-            'Username siswa bukan NIS',
-            $siswaNis === 0,
-            $siswaNis === 0
-                ? 'Seluruh akun siswa sudah memakai username.'
-                : $siswaNis . ' akun siswa masih memakai NIS sebagai login. Pakai tombol "Buatkan username massal" di Data siswa (bagian 17 README).'
+            'Username siswa terisi',
+            $siswaKosong === 0,
+            $siswaKosong === 0
+                ? 'Seluruh akun siswa punya username. Karakter bebas (angka semua, huruf semua, spasi, atau simbol) diperbolehkan.'
+                : $siswaKosong . ' akun siswa belum punya username. Isi lewat Data siswa atau impor CSV.'
         );
     }
 } catch (Throwable $galat) {

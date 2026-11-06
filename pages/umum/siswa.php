@@ -43,8 +43,15 @@ halaman_atas('Data siswa', $sendiri !== null ? 'Data saya' : 'Daftar siswa', ['n
 <?php endif; ?>
 
 <form class="kartu form-kartu" method="get" action="<?= e(url('pages/umum/siswa.php')) ?>">
-  <div class="form-baris"><label for="cari">Cari nama atau NIS</label>
-    <input class="input" id="cari" name="cari" value="<?= e($cari) ?>" data-saring-tabel="#tabel-siswa-umum"></div>
+  <?php kotak_cari_siswa([
+      'id' => 'cari', 'id_saran' => 'saran-cari-siswa', 'id_petunjuk' => 'petunjuk-cari-siswa',
+      'label' => 'Cari nama atau NIS', 'nama' => 'cari', 'teks' => $cari,
+      'mode' => 'saring', 'wajib' => false, 'kelas_baris' => 'form-baris',
+      'placeholder' => 'Ketik NIS atau nama siswa',
+      'atribut_tambahan' => 'data-saring-tabel="#tabel-siswa-umum"',
+      'bantuan' => 'Saran muncul otomatis; pilih siswa untuk langsung menyaring tabel.',
+      'gaya_petunjuk' => 'margin-top:6px',
+  ]); ?>
   <div class="form-aksi"><button class="tombol" type="submit"><?= ikon('cari', 20) ?> Cari</button></div>
 </form>
 

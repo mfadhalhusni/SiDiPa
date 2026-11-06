@@ -121,14 +121,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             }
         }
     } elseif ($aksi === 'buat_username') {
-        /* Migrasi massal: semua akun siswa yang username-nya masih berupa
-           angka (NIS lama) dibuatkan username dari nama. Aman dijalankan
-           berulang; akun yang sudah memakai username huruf tidak diubah. */
+        /* Migrasi warisan: HANYA akun yang username-nya masih SAMA PERSIS
+           dengan NIS-nya yang dibuatkan username dari nama. Username angka
+           yang sengaja dibuat admin (dan tidak sama dengan NIS) kini SAH,
+           jadi tidak boleh ikut ditimpa. Aman dijalankan berulang. */
         try {
             $daftarLama = db_semua(
                 "SELECT s.id, s.nis, s.nama, p.id AS pengguna_id, p.username
                  FROM siswa s JOIN pengguna p ON p.id = s.pengguna_id
-                 WHERE p.peran = 'siswa' AND p.username REGEXP '^[0-9]+$'
+                 WHERE p.peran = 'siswa' AND p.username = s.nis
                  ORDER BY s.id"
             );
             $hasil = [];
@@ -148,7 +149,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             });
             $_SESSION['hasil_username_siswa'] = $hasil;
             log_akses('buat_username_siswa_massal', 'pengguna', count($hasil));
-            flash(count($hasil) . ' akun siswa sudah memakai username baru. Daftarnya tampil di bawah.');
+            flash(count($hasil) . ' akun warisan (username = NIS) sudah memakai username baru. Daftarnya tampil di bawah.');
         } catch (Throwable $galat) {
             $pesanGalat = 'Migrasi username gagal: ' . $galat->getMessage();
         }
@@ -266,8 +267,8 @@ if (is_array($hasilUsername) && $hasilUsername !== []): ?>
       <div class="form-baris"><label for="nama">Nama lengkap <span class="wajib">wajib</span></label>
         <input class="input" id="nama" name="nama" value="<?= e($form['nama']) ?>" required maxlength="120"></div>
       <div class="form-baris"><label for="username">Username siswa (untuk login)</label>
-        <input class="input" id="username" name="username" value="<?= e($form['username']) ?>" maxlength="60" placeholder="mis. ahmad.rizky" autocomplete="off">
-        <p class="bantuan">Dipakai siswa saat masuk, <strong>bukan NIS/NISN</strong>. Huruf kecil, angka, titik, strip, atau garis bawah; minimal 3 karakter dan wajib ada huruf. Kosongkan agar dibuat otomatis dari nama.</p></div>
+        <input class="input" id="username" name="username" value="<?= e($form['username']) ?>" maxlength="60" placeholder="bebas: 20260100, AHMAD, atau ahmad.rizky" autocomplete="off">
+        <p class="bantuan">Dipakai siswa saat masuk dan sebagai isi QR kartu. <strong>Karakter bebas</strong>: boleh angka semua, huruf semua, huruf besar, spasi, atau simbol (maksimal 60 karakter). Kosongkan agar dibuat otomatis dari nama.</p></div>
       <div class="form-baris"><label for="jk">Jenis kelamin</label>
         <select class="input" id="jk" name="jenis_kelamin">
           <option value="L" <?= $form['jenis_kelamin'] === 'L' ? 'selected' : '' ?>>Laki-laki</option>
@@ -308,19 +309,26 @@ if (is_array($hasilUsername) && $hasilUsername !== []): ?>
 <section class="kartu form-kartu">
   <p class="label-kecil">Pembaruan akun siswa</p>
   <h2>Buatkan username untuk semua siswa</h2>
-  <p class="teks-kecil">Tombol ini mengganti username akun siswa yang masih berupa angka NIS dengan username dari nama. Username yang sudah berhuruf <strong>tidak diubah</strong>. Kata sandi tetap. <strong>QR kartu kini memuat username siswa</strong> — setelah migrasi, cetak ulang semua kartu (lihat bagian 18 README). NIS tetap dipakai untuk kode sertifikat.</p>
+  <p class="teks-kecil">Tombol ini <strong>hanya</strong> mengganti akun warisan yang username-nya masih sama persis dengan NIS, dibuatkan username dari nama. Username lain — termasuk username angka pilihan admin — <strong>tidak diubah</strong>. Kata sandi tetap. <strong>QR kartu memuat username siswa</strong>; setelah username berubah, cetak ulang kartu siswa tersebut (lihat bagian 18 README). NIS tetap dipakai untuk kode sertifikat.</p>
   <form method="post" action="<?= e(url('pages/admin/siswa.php')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="aksi" value="buat_username">
-    <button class="tombol tombol-utama" type="submit" data-konfirmasi="Buatkan username baru bagi semua siswa yang masih memakai NIS sebagai login?"><?= ikon('pengguna', 20) ?> Buatkan username massal</button>
+    <button class="tombol tombol-utama" type="submit" data-konfirmasi="Buatkan username baru hanya bagi akun yang masih memakai NIS sebagai username? Username lain tidak diubah."><?= ikon('pengguna', 20) ?> Buatkan username massal</button>
   </form>
 </section>
 
 <?= bagian_judul('Daftar siswa', 'Maksimal 200 baris. Gunakan pencarian untuk data besar.') ?>
 <section class="kartu">
   <form class="form-grid" method="get" action="<?= e(url('pages/admin/siswa.php')) ?>" style="margin-bottom:14px">
-    <div class="form-baris"><label for="cari">Cari nama atau NIS</label>
-      <input class="input" id="cari" name="cari" value="<?= e($cari) ?>" data-saring-tabel="#tabel-siswa"></div>
+    <?php kotak_cari_siswa([
+        'id' => 'cari', 'id_saran' => 'saran-cari-siswa', 'id_petunjuk' => 'petunjuk-cari-siswa',
+        'label' => 'Cari nama atau NIS', 'nama' => 'cari', 'teks' => $cari,
+        'mode' => 'saring', 'wajib' => false, 'kelas_baris' => 'form-baris',
+        'placeholder' => 'Ketik NIS atau nama siswa',
+        'atribut_tambahan' => 'data-saring-tabel="#tabel-siswa"',
+        'bantuan' => 'Saran muncul otomatis; pilih siswa untuk langsung menyaring tabel.',
+        'gaya_petunjuk' => 'margin-top:6px',
+    ]); ?>
     <div class="form-baris"><label for="kelas">Filter kelas</label>
       <select class="input" id="kelas" name="kelas" onchange="this.form.submit()">
         <option value="0">Semua kelas</option>

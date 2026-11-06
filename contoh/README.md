@@ -22,6 +22,6 @@ Berkas di folder ini **hanya untuk uji coba**. Semua nama, NIS, dan nomor WhatsA
 | Siswa | sesuai nama, mis. `ahmad.rizky` (NIS `20260100`) | `Siswa@2026` |
 
 Semua akun contoh bertanda `wajib_ganti_password = 1`, jadi kata sandi harus diganti pada login pertama.
-Siswa **tidak lagi masuk memakai NIS/NISN**; NIS tetap tercetak di kartu dan dipakai untuk QR serta kode sertifikat. Daftar lengkap 20 username ada di `migrasi_username_siswa.sql`.
+Siswa masuk memakai **username siswa** (bukan NIS otomatis). Username boleh angka semua, huruf semua, maupun simbol sesuai yang dibuat admin (bagian 19 README); paket contoh ini memakai username dari nama. **QR kartu berisi username siswa**, NIS tetap tercetak di kartu dan dipakai untuk kode sertifikat serta pencarian manual. Daftar lengkap 20 username ada di `migrasi_username_siswa.sql`.
 
 > Jangan mengimpor paket ini ke instalasi produksi yang sudah berisi data siswa asli.

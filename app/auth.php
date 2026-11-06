@@ -394,10 +394,10 @@ function auth_masuk(string $username, string $kataSandi): array
     }
     if ($pengguna === null || !password_verify($kataSandi, (string) $pengguna['password_hash'])) {
         log_akses('login_gagal', $username);
-        /* Siswa tidak lagi masuk dengan NIS/NISN. Beri petunjuk yang jelas
-           bila yang diketik masih berupa angka dan tidak ada akunnya. */
+        /* Username siswa kini boleh angka semua, jadi angka bukan lagi
+           indikasi "masih memakai NIS". Beri petunjuk netral bila gagal. */
         if ($pengguna === null && preg_match('/^\d+$/', $username)) {
-            return ['ok' => false, 'pesan' => 'NIS/NISN tidak dipakai untuk login lagi. Masukkan username siswa (mis. ahmad.rizky). Hubungi admin bila lupa.'];
+            return ['ok' => false, 'pesan' => 'Username angka ini tidak terdaftar. Username siswa boleh angka maupun huruf sesuai yang dibuat admin; hubungi admin bila lupa.'];
         }
         return ['ok' => false, 'pesan' => 'Username atau kata sandi salah.'];
     }

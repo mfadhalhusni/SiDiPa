@@ -68,8 +68,8 @@ $didalamFrame = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '')) ===
       <?= csrf_field() ?>
       <div class="form-baris">
         <label for="username">Username</label>
-        <input class="input" id="username" name="username" type="text" required autocomplete="username" placeholder="mis. ahmad.rizky" autofocus>
-        <p class="bantuan">Siswa masuk dengan <strong>username siswa</strong>, bukan NIS/NISN. Guru, wali, dan staf memakai username akun masing-masing.</p>
+        <input class="input" id="username" name="username" type="text" required autocomplete="username" placeholder="mis. ahmad.rizky atau 20260100" autofocus>
+        <p class="bantuan">Semua akun masuk dengan <strong>username</strong>. Username siswa boleh berupa angka maupun huruf, sesuai yang dibuat admin di Data siswa; NIS bukan otomatis menjadi username.</p>
       </div>
       <div class="form-baris">
         <label for="kata_sandi">Kata sandi</label>

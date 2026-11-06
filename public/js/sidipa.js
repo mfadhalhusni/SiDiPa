@@ -22,31 +22,33 @@
   /* Konfirmasi tindakan yang mengubah data. */
   document.addEventListener('submit', function (event) {
     var form = event.target;
-    /* Form AJAX (mis. pemindaian QR) mengelola tombolnya sendiri agar bisa
-       dipakai berulang tanpa jeda 8 detik. */
-    if (form.dataset && form.dataset.lewatiMuat === '1') { return; }
     var pengirim = event.submitter || null;
     var teksKonfirmasi = form.dataset.konfirmasi || (pengirim ? pengirim.dataset.konfirmasi : '');
     if (teksKonfirmasi && !window.confirm(teksKonfirmasi)) {
       event.preventDefault();
       return;
     }
-    var tombol = pengirim || form.querySelector('[type="submit"]');
-    if (tombol && !tombol.disabled) {
-      tombol.dataset.teksAsli = tombol.innerHTML;
-      tombol.disabled = true;
-      tombol.classList.add('ditekan');
-      tombol.innerHTML = 'Memproses...';
-      window.setTimeout(function () {
-        if (tombol.disabled) {
-          tombol.disabled = false;
-          tombol.classList.remove('ditekan');
-          tombol.innerHTML = tombol.dataset.teksAsli || 'Simpan';
-        }
-      }, 8000);
+    /* Form AJAX / saran otomatis mengelola tombolnya sendiri agar bisa
+       dipakai berulang tanpa jeda 8 detik. Konfirmasi di atas TETAP jalan. */
+    var lewati = !!(form.dataset && form.dataset.lewatiMuat === '1');
+    if (!lewati) {
+      var tombol = pengirim || form.querySelector('[type="submit"]');
+      if (tombol && !tombol.disabled) {
+        tombol.dataset.teksAsli = tombol.innerHTML;
+        tombol.disabled = true;
+        tombol.classList.add('ditekan');
+        tombol.innerHTML = 'Memproses...';
+        window.setTimeout(function () {
+          if (tombol.disabled) {
+            tombol.disabled = false;
+            tombol.classList.remove('ditekan');
+            tombol.innerHTML = tombol.dataset.teksAsli || 'Simpan';
+          }
+        }, 8000);
+      }
+      var muat = form.querySelector('.status-memuat');
+      if (muat) { muat.classList.add('tampil'); }
     }
-    var muat = form.querySelector('.status-memuat');
-    if (muat) { muat.classList.add('tampil'); }
   });
 
   /* Keterangan wajib untuk kejadian tingkat sedang / berat. */

@@ -6,11 +6,14 @@
 --
 -- Untuk DATA ASLI (jumlah/nama siswa berbeda), JANGAN memakai daftar ini.
 -- Pakai menu Admin -> Data siswa -> "Buatkan username massal". Tombol itu
--- membaca seluruh akun siswa yang username-nya masih angka, membuat username
--- dari nama, menangani bentrok nama, dan menampilkan daftar hasilnya.
+-- HANYA menyentuh akun warisan yang username-nya sama persis dengan NIS,
+-- membuat username dari nama, menangani bentrok nama, dan menampilkan daftar
+-- hasilnya. Sejak bagian 19 username angka pilihan admin SAH dan tidak
+-- ditimpa oleh tombol ini.
 --
--- Kata sandi TIDAK berubah. Setelah migrasi, NIS/NISN tidak bisa dipakai
--- untuk login. NIS tetap dipakai untuk kartu QR dan kode sertifikat.
+-- Kata sandi TIDAK berubah. NIS bukan username otomatis; NIS tetap dipakai
+-- untuk identitas, pencarian manual, dan kode sertifikat. QR kartu berisi
+-- USERNAME siswa, jadi cetak ulang kartu bila username berubah.
 -- ==========================================================================
 SET NAMES utf8mb4;
 
@@ -47,6 +50,7 @@ UPDATE pengguna SET username = 'salsabila.rahma2'  WHERE id = 24 AND username = 
 --  20260108 ilham.maulana      20260118 bagas.pratama2
 --  20260109 citra.amelia       20260119 salsabila.rahma2
 
--- Pemeriksaan: seharusnya 0 baris (tidak ada lagi siswa ber-username angka).
+-- Pemeriksaan WARISAN: seharusnya 0 baris (tidak ada lagi akun yang
+-- username-nya masih sama persis dengan NIS). Username angka lain SAH.
 -- SELECT p.id, p.username, s.nis FROM pengguna p JOIN siswa s ON s.pengguna_id = p.id
---  WHERE p.peran = 'siswa' AND p.username REGEXP '^[0-9]+$';
+--  WHERE p.peran = 'siswa' AND p.username = s.nis;

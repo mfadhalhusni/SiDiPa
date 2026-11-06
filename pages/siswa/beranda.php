@@ -42,7 +42,7 @@ halaman_atas('Beranda siswa', '', ['nav' => 'beranda']);
   <?= bagian_judul('Nilai keseluruhan', 'Rata-rata capaian seluruh aspek pada semester berjalan.') ?>
   <section class="kartu kartu-ringkasan margin-bawah" aria-label="Rata-rata dan predikat keseluruhan">
     <div class="ringkasan-sel">
-      <p class="label-kecil">Rata-rata keseluruhan poin</p>
+      <p class="label-kecil">Rata-rata capaian keseluruhan</p>
       <p class="ringkasan-angka mono"><?= e(number_format((float) $ringkasan['rata_persen'], 1, ',', '.')) ?>%</p>
       <p class="teks-kecil" style="margin:4px 0 0">Rata-rata persentase capaian <?= (int) $ringkasan['jumlah_aspek'] ?> aspek terhadap target semester.</p>
     </div>
@@ -54,7 +54,6 @@ halaman_atas('Beranda siswa', '', ['nav' => 'beranda']);
     <div class="ringkasan-sel">
       <p class="label-kecil">Rincian angka</p>
       <p class="teks-kecil" style="margin:6px 0 0">Total poin: <strong class="mono"><?= (int) $ringkasan['total_poin'] ?></strong> dari target <strong class="mono"><?= (int) $ringkasan['total_target'] ?></strong></p>
-      <p class="teks-kecil" style="margin:4px 0 0">Rata-rata poin per aspek: <strong class="mono"><?= e(number_format((float) $ringkasan['rata_poin'], 1, ',', '.')) ?></strong></p>
     </div>
   </section>
 

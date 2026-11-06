@@ -98,7 +98,7 @@ function tandai_duplikat(array &$baris2): void
         }
         if ($mentah !== '' && $r['username'] !== $mentah) {
             $r['status'] = 'galat';
-            $r['catatan'] = 'Username mengandung karakter yang tidak diizinkan.';
+            $r['catatan'] = 'Username mengandung karakter kontrol atau lebih dari 60 karakter.';
             continue;
         }
         if ($mentah !== '') {
@@ -123,12 +123,12 @@ function tandai_duplikat(array &$baris2): void
                 username_siswa_dari_nama((string) $r['nama']), 0, $terpakai
             );
             $r['catatan'] = 'Username dibuat otomatis: ' . $r['username'];
-        } elseif (isset($usernameTerlihat[strtolower($r['username'])])) {
+        } elseif (isset($usernameTerlihat[username_siswa_kunci($r['username'])])) {
             $r['status'] = 'lewati';
-            $r['catatan'] = 'Username ganda di CSV (baris ' . $usernameTerlihat[strtolower($r['username'])] . ').';
+            $r['catatan'] = 'Username ganda di CSV (baris ' . $usernameTerlihat[username_siswa_kunci($r['username'])] . ').';
             continue;
         }
-        $usernameTerlihat[strtolower($r['username'])] = $r['baris'];
+        $usernameTerlihat[username_siswa_kunci($r['username'])] = $r['baris'];
         $terpakai[] = $r['username'];
         $sudahAda = db_satu('SELECT id FROM siswa WHERE nis = ?', [$r['nis']])
             ?? db_satu('SELECT id FROM pengguna WHERE username = ?', [$r['username']]);
@@ -261,7 +261,7 @@ halaman_atas('Impor siswa dari CSV', 'Admin / Data master', [
 <section class="kartu form-kartu">
   <p class="label-kecil">Unggah berkas</p>
   <h2>Data siswa lama</h2>
-  <p class="teks-kecil">Kolom wajib: <strong>nis, nama, kelas</strong>. Kolom opsional: <strong>username</strong>, jenis_kelamin, nama_wali, no_wa_wali. Bila <code>username</code> kosong, sistem membuatnya otomatis dari nama (mis. <code>ahmad.rizky</code>) dan menambahkan angka bila bentrok. Username tidak boleh hanya angka seperti NIS. Pemisah koma atau titik koma dideteksi otomatis. Kelas yang belum ada dibuat otomatis.</p>
+  <p class="teks-kecil">Kolom wajib: <strong>nis, nama, kelas</strong>. Kolom opsional: <strong>username</strong>, jenis_kelamin, nama_wali, no_wa_wali. Bila <code>username</code> kosong, sistem membuatnya otomatis dari nama (mis. <code>ahmad.rizky</code>) dan menambahkan angka bila bentrok. Username boleh angka semua, huruf semua, maupun campuran. Pemisah koma atau titik koma dideteksi otomatis. Kelas yang belum ada dibuat otomatis.</p>
   <form method="post" action="<?= e(url('pages/admin/impor_siswa.php')) ?>" enctype="multipart/form-data">
     <?= csrf_field() ?>
     <input type="hidden" name="langkah" value="pratinjau">

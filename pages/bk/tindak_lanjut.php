@@ -15,11 +15,6 @@ $semester = semester_wajib();
 $semesterId = (int) $semester['id'];
 $pesanGalat = '';
 
-$daftarSiswa = db_semua(
-    'SELECT s.id, s.nis, s.nama, k.nama AS kelas FROM siswa s
-     LEFT JOIN kelas k ON k.id = s.kelas_id WHERE s.aktif = 1
-     ORDER BY k.nama, s.nama LIMIT 500'
-);
 $katalogPositif = db_semua(
     "SELECT id, nama, aspek_id, poin FROM katalog_poin WHERE jenis = 'positif' AND aktif = 1 AND otomatis = 0 ORDER BY nama"
 );
@@ -120,17 +115,14 @@ halaman_atas('Tindak Lanjut', 'BK / pembinaan', [
 <section class="kartu form-kartu">
   <p class="label-kecil">Catatan baru</p>
   <h2>Tindak lanjut pembinaan</h2>
-  <form method="post" action="<?= e(url('pages/bk/tindak_lanjut.php')) ?>">
+  <form method="post" action="<?= e(url('pages/bk/tindak_lanjut.php')) ?>" data-lewati-muat="1">
     <?= csrf_field() ?>
     <input type="hidden" name="aksi" value="tambah">
     <div class="form-grid">
-      <div class="form-baris"><label for="siswa_id">Siswa <span class="wajib">wajib</span></label>
-        <select class="input" id="siswa_id" name="siswa_id" required>
-          <option value="0">-- Pilih siswa --</option>
-          <?php foreach ($daftarSiswa as $s): ?>
-            <option value="<?= e($s['id']) ?>"><?= e($s['nama']) ?> · <?= e($s['nis']) ?> (<?= e($s['kelas'] ?? '-') ?>)</option>
-          <?php endforeach; ?>
-        </select></div>
+      <?php kotak_cari_siswa([
+          'id' => 'cari-siswa-bk', 'label' => 'Siswa', 'nama' => 'siswa_id',
+          'kelas_baris' => 'form-baris',
+      ]); ?>
       <div class="form-baris"><label for="pemicu">Pemicu <span class="wajib">wajib</span></label>
         <input class="input" id="pemicu" name="pemicu" maxlength="120" required placeholder="Mis. skor Kedisiplinan di bawah ambang"></div>
       <div class="form-baris"><label for="tanggal">Tanggal</label>

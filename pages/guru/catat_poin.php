@@ -12,7 +12,6 @@ $semester = semester_wajib();
 $semesterId = (int) $semester['id'];
 $batasHarian = (int) pengaturan('batas_pengurangan_harian', '10');
 $pesanGalat = '';
-$siswa = daftar_siswa_untuk_guru();
 $katalog = db_semua(
     'SELECT kp.id, kp.kode, kp.nama, kp.poin, kp.jenis, kp.tingkat, kp.wajib_keterangan,
             a.id AS aspek_id, a.nama AS aspek
@@ -110,19 +109,13 @@ halaman_atas('Catat poin', 'Beranda guru / Catat poin', [
     <span><?= $siswa === [] ? 'Belum ada siswa aktif.' : 'Katalog poin manual belum tersedia.' ?> Minta admin melengkapi data.</span>
   </div>
 <?php else: ?>
-  <form class="kartu form-kartu" method="post" action="<?= e(url('pages/guru/catat_poin.php')) ?>" enctype="multipart/form-data">
+  <form class="kartu form-kartu" method="post" action="<?= e(url('pages/guru/catat_poin.php')) ?>" enctype="multipart/form-data" data-lewati-muat="1">
     <?= csrf_field() ?>
     <div class="form-grid">
-      <div class="form-baris lebar-penuh">
-        <label for="siswa_id">Siswa <span class="wajib">wajib</span></label>
-        <select class="input" id="siswa_id" name="siswa_id" required>
-          <option value="">— Pilih siswa —</option>
-          <?php foreach ($siswa as $s): ?>
-            <option value="<?= (int) $s['id'] ?>"><?= e($s['nama']) ?> · <?= e($s['nis']) ?> · <?= e($s['kelas'] ?? '-') ?></option>
-          <?php endforeach; ?>
-        </select>
-        <p class="bantuan">Semua siswa aktif tampil; penugasan kelas tidak diperlukan.</p>
-      </div>
+      <?php kotak_cari_siswa([
+          'label' => 'Siswa', 'nama' => 'siswa_id',
+          'bantuan' => 'Ketik NIS atau nama siswa, lalu pilih dari saran. Semua siswa aktif dapat dicari.',
+      ]); ?>
       <div class="form-baris lebar-penuh">
         <label for="katalog_id">Kejadian / katalog poin <span class="wajib">wajib</span></label>
         <select class="input" id="katalog_id" name="katalog_id" required data-pilih-poin>

@@ -31,7 +31,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     csrf_wajib();
     $mentah = $_POST['siswa_id'] ?? [];
     $pilih = is_array($mentah) ? array_values(array_unique(array_filter(array_map('intval', $mentah)))) : [];
-    $boleh = array_map('intval', array_column($siswa, 'id'));
+    /* Validasi ke DB, bukan ke 300 baris yang tercetak: siswa yang dipilih
+       lewat saran otomatis (di luar daftar awal) tetap sah. */
+    $boleh = [];
+    if ($pilih !== []) {
+        $tanda = implode(',', array_fill(0, count($pilih), '?'));
+        $boleh = array_map('intval', array_column(
+            db_semua('SELECT id FROM siswa WHERE aktif = 1 AND id IN (' . $tanda . ')', $pilih),
+            'id'
+        ));
+    }
     $katalogId = post_int('katalog_id');
     $keterangan = post('keterangan', '', 2000);
     $tanggal = post('tanggal', '', 10);
@@ -148,7 +157,14 @@ halaman_atas('Catat banyak siswa', 'Satu kejadian / banyak siswa', [
             <button class="tombol tombol-kecil tombol-putih" type="button" data-pilih-semua="0"><?= ikon('silang', 16) ?> Kosongkan</button>
           </div>
         </div>
-        <div class="daftar-siswa" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:8px">
+        <?php kotak_cari_siswa([
+            'id' => 'cari-siswa-banyak', 'label' => 'Cari siswa untuk ditambahkan',
+            'mode' => 'centang', 'centang' => 'siswa_id[]', 'daftar' => 'daftar-siswa',
+            'wajib' => false, 'placeholder' => 'Ketik NIS atau nama siswa',
+            'bantuan' => 'Ketik NIS atau nama, pilih dari saran untuk langsung mencentang siswanya. Daftar di bawah tetap bisa dipakai.',
+            'kelas_baris' => '',
+        ]); ?>
+        <div class="daftar-siswa" id="daftar-siswa" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:8px">
           <?php foreach ($siswa as $s): ?>
             <label class="pilihan-baris" style="border:2px solid #000;border-radius:8px;padding:8px 10px;display:flex;gap:8px;align-items:center;cursor:pointer;background:#fff">
               <input type="checkbox" name="siswa_id[]" value="<?= (int) $s['id'] ?>" style="width:20px;height:20px;min-height:0">
@@ -187,12 +203,26 @@ halaman_atas('Catat banyak siswa', 'Satu kejadian / banyak siswa', [
   <script>
     (function () {
       'use strict';
-      var kotak = Array.prototype.slice.call(document.querySelectorAll('input[name="siswa_id[]"]'));
+      var kotak = [];
       var keluaran = document.getElementById('jumlah-terpilih');
       function hitung() {
         var n = kotak.filter(function (x) { return x.checked; }).length;
         if (keluaran) { keluaran.textContent = n + ' siswa dipilih.'; }
       }
+      function muatUlang() {
+        kotak = Array.prototype.slice.call(document.querySelectorAll('input[name="siswa_id[]"]'));
+        kotak.forEach(function (x) {
+          if (!x.dataset.sidipaTerpasang) {
+            x.dataset.sidipaTerpasang = '1';
+            x.addEventListener('change', hitung);
+          }
+        });
+      }
+      document.addEventListener('sidipa:siswa-ditambah', function () {
+        muatUlang();
+        hitung();
+      });
+      muatUlang();
       document.querySelectorAll('[data-pilih-semua]').forEach(function (tombol) {
         tombol.addEventListener('click', function () {
           var ya = tombol.getAttribute('data-pilih-semua') === '1';
@@ -200,7 +230,7 @@ halaman_atas('Catat banyak siswa', 'Satu kejadian / banyak siswa', [
           hitung();
         });
       });
-      kotak.forEach(function (x) { x.addEventListener('change', hitung); });
+
       var pilih = document.querySelector('[data-pilih-poin]');
       var out = document.getElementById('pratinjau-poin');
       if (pilih && out) {

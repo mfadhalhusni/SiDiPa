@@ -227,6 +227,79 @@ function halaman_atas(string $judul, string $keterangan = '', array $opsi = []):
     }
 }
 
+/**
+ * SATU kotak "Cari siswa" dengan saran otomatis, dipakai semua halaman yang
+ * memilih/mencari siswa (model kolom pencarian di menu Scan Masuk / Dhuha).
+ * Pencarian terjadi di server lewat api/cari_siswa.php, jadi tidak ada lagi
+ * <select> berisi ratusan siswa yang terpotong batas 300/500 baris.
+ *
+ * Opsi: id, id_nilai, id_saran, id_petunjuk, label, wajib, nama, nilai,
+ * teks, placeholder, nilai_dari (id|nis), tampil (nama|nis),
+ * mode (pilih|saring|centang), kirim, validasi, centang, daftar,
+ * bantuan, gaya_petunjuk, kelas_baris, atribut_tambahan.
+ */
+function kotak_cari_siswa(array $o = []): void
+{
+    $id = (string) ($o['id'] ?? 'cari-siswa');
+    $idNilai = (string) ($o['id_nilai'] ?? ($id . '-nilai'));
+    $idSaran = (string) ($o['id_saran'] ?? ($id . '-saran'));
+    $idPetunjuk = (string) ($o['id_petunjuk'] ?? ($id . '-petunjuk'));
+    $label = (string) ($o['label'] ?? 'Siswa');
+    $wajib = (bool) ($o['wajib'] ?? true);
+    $nama = (string) ($o['nama'] ?? 'siswa_id');
+    $nilai = (string) ($o['nilai'] ?? '');
+    $teks = (string) ($o['teks'] ?? '');
+    $placeholder = (string) ($o['placeholder'] ?? 'Ketik NIS atau nama siswa');
+    $nilaiDari = (string) ($o['nilai_dari'] ?? 'id');
+    $tampil = (string) ($o['tampil'] ?? 'nama');
+    $mode = (string) ($o['mode'] ?? 'pilih');
+    $bantuan = (string) ($o['bantuan'] ?? 'Ketik NIS atau nama siswa, lalu pilih dari saran.');
+    $gayaPetunjuk = (string) ($o['gaya_petunjuk'] ?? 'margin-top:8px');
+    $kelasBaris = (string) ($o['kelas_baris'] ?? 'form-baris lebar-penuh');
+    $tambahan = (string) ($o['atribut_tambahan'] ?? '');
+
+    $data = ' data-cari-siswa'
+        . ' data-endpoint="' . e(url('api/cari_siswa.php')) . '"'
+        . ' data-nilai="' . e($nilaiDari) . '"'
+        . ' data-tampil="' . e($tampil) . '"'
+        . ' data-mode="' . e($mode) . '"'
+        . ' data-petunjuk="' . e($idPetunjuk) . '"'
+        . ' data-bantuan="' . e($bantuan) . '"';
+    if ($mode === 'pilih') {
+        $data .= ' data-sasaran="' . e($idNilai) . '"';
+    }
+    if ($mode === 'centang') {
+        $data .= ' data-centang="' . e((string) ($o['centang'] ?? 'siswa_id[]')) . '"'
+            . ' data-daftar="' . e((string) ($o['daftar'] ?? '')) . '"';
+    }
+    foreach (['kirim', 'validasi'] as $kunci) {
+        if (isset($o[$kunci])) {
+            $data .= ' data-' . $kunci . '="' . e((string) $o[$kunci]) . '"';
+        }
+    }
+
+    echo $kelasBaris !== '' ? '<div class="' . e($kelasBaris) . '">' : '<div>';
+    echo '<label for="' . e($id) . '">' . e($label)
+        . ($wajib ? ' <span class="wajib">wajib</span>' : '') . '</label>';
+    echo '<div class="pembungkus-saran">';
+    echo '<input class="input" type="text" id="' . e($id) . '"'
+        . ($mode === 'saring' ? ' name="' . e($nama) . '"' : '')
+        . ' value="' . e($teks) . '" placeholder="' . e($placeholder) . '"'
+        . ' autocomplete="off" role="combobox" aria-autocomplete="list"'
+        . ' aria-expanded="false" aria-haspopup="listbox" aria-controls="' . e($idSaran) . '"'
+        . $data . ($wajib ? ' required' : '') . ($tambahan !== '' ? ' ' . $tambahan : '') . '>';
+    if ($mode === 'pilih') {
+        echo '<input type="hidden" id="' . e($idNilai) . '" name="' . e($nama)
+            . '" value="' . e($nilai) . '">';
+    }
+    echo '<div class="saran-siswa" id="' . e($idSaran)
+        . '" role="listbox" aria-label="Saran siswa" hidden></div>';
+    echo '</div>';
+    echo '<p class="bantuan" id="' . e($idPetunjuk) . '" style="' . e($gayaPetunjuk)
+        . '">' . e($bantuan) . '</p>';
+    echo '</div>';
+}
+
 function halaman_bawah(): void
 {
     $peran = auth_peran();
@@ -249,6 +322,7 @@ function halaman_bawah(): void
             . ' href="' . e(url($tujuan)) . '">' . ikon($item['ikon'], 22) . '<span>' . e($item['label']) . '</span></a>';
     }
     echo '</nav></div></div><script src="' . e(asset('js/sidipa.js')) . '" defer></script>'
+        . '<script src="' . e(asset('js/cari-siswa.js')) . '" defer></script>'
         . pwa_skrip() . '</body></html>';
 }
 
