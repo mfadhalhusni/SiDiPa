@@ -300,6 +300,36 @@ function kotak_cari_siswa(array $o = []): void
     echo '</div>';
 }
 
+/**
+ * Panel "Catatan siswa pada tanggal ini" — pencegah pencatatan ganda.
+ * Diisi lewat api/riwayat_harian.php oleh public/js/riwayat-harian.js
+ * begitu guru memilih siswa dan/atau mengubah tanggal. $banyak = true untuk
+ * menu Catat banyak siswa (tabel diberi kolom Nama siswa).
+ */
+function kartu_riwayat_harian(bool $banyak = false): void
+{
+    echo '<section class="kartu margin-atas" id="kartu-riwayat-harian"'
+        . ' data-endpoint="' . e(url('api/riwayat_harian.php')) . '"'
+        . ' data-mode="' . ($banyak ? 'banyak' : 'satu') . '"'
+        . ' aria-label="Catatan siswa pada tanggal ini">';
+    echo '<p class="label-kecil">Catatan siswa pada tanggal ini</p>';
+    echo '<p class="bantuan" id="riwayat-status" aria-live="polite">'
+        . 'Pilih siswa dan tanggal untuk melihat pelanggaran yang sudah tercatat.</p>';
+    echo '<div class="pesan pesan-galat margin-atas" id="riwayat-peringatan" role="alert" hidden></div>';
+    echo '<div class="tabel-bungkus margin-atas" id="riwayat-tabel" hidden>';
+    echo '<table class="tabel"><thead><tr>';
+    if ($banyak) {
+        echo '<th>Siswa</th>';
+    }
+    echo '<th>Jam</th><th>Kejadian</th><th>Aspek</th><th>Poin</th>'
+        . '<th>Sumber</th><th>Status</th></tr></thead>';
+    echo '<tbody id="riwayat-isi"></tbody></table></div>';
+    echo '<p class="bantuan margin-atas">Daftar ini bersifat informasi, bukan pembatas. '
+        . 'Catatan yang dibatalkan tetap ditampilkan agar tidak dicatat ulang. '
+        . 'Identitas pencatat sengaja tidak ditampilkan.</p>';
+    echo '</section>';
+}
+
 function halaman_bawah(): void
 {
     $peran = auth_peran();
@@ -323,6 +353,7 @@ function halaman_bawah(): void
     }
     echo '</nav></div></div><script src="' . e(asset('js/sidipa.js')) . '" defer></script>'
         . '<script src="' . e(asset('js/cari-siswa.js')) . '" defer></script>'
+        . '<script src="' . e(asset('js/riwayat-harian.js')) . '" defer></script>'
         . pwa_skrip() . '</body></html>';
 }
 

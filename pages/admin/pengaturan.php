@@ -42,7 +42,6 @@ $definisi = [
         ['kunci' => 'poin_bonus_pagi', 'label' => 'Poin bonus datang pagi', 'tipe' => 'angka'],
         ['kunci' => 'bonus_pagi_setiap_hari', 'label' => 'Bonus diberikan setiap N hari awal', 'tipe' => 'angka'],
         ['kunci' => 'bonus_pagi_maks', 'label' => 'Maksimal bonus pagi per semester', 'tipe' => 'angka'],
-        ['kunci' => 'batas_pengurangan_harian', 'label' => 'Maksimal pengurangan manual per aspek per hari', 'tipe' => 'angka'],
     ],
     'predikat' => [
         ['kunci' => 'predikat_aplus', 'label' => 'A+ mulai persentase (bawaan 95)', 'tipe' => 'angka'],

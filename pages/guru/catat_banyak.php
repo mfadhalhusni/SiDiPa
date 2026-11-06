@@ -5,7 +5,7 @@ declare(strict_types=1);
  | §10 PDF — mode "catat banyak siswa sekaligus untuk satu kejadian".
  | Satu kejadian katalog, satu tanggal, satu deskripsi, banyak siswa.
  | Semua penyisipan berada dalam SATU transaksi: bila satu siswa gagal
- | (misal melampaui cap harian), tidak ada catatan yang tersimpan.
+ | (misal unggahan bukti gagal), tidak ada catatan yang tersimpan.
  | Semua siswa aktif boleh dipilih tanpa penugasan kelas.
  */
 
@@ -16,7 +16,6 @@ cek_input_semester();
 $idGuru = (int) $pengguna['id'];
 $semester = semester_wajib();
 $semesterId = (int) $semester['id'];
-$batasHarian = (int) pengaturan('batas_pengurangan_harian', '10');
 $pesanGalat = '';
 $siswa = daftar_siswa_untuk_guru();
 $katalog = db_semua(
@@ -68,63 +67,44 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         } elseif (!in_array($poin, range(-100, 100), true)) {
             $pesanGalat = 'Nilai poin katalog tidak valid.';
         } else {
-            $terhalang = [];
-            if ($poin < 0) {
-                foreach ($pilih as $sid) {
-                    $terpakai = pengurangan_manual_harian($sid, $aspekId, $tanggal);
-                    if ($terpakai + abs($poin) > $batasHarian) {
-                        $nama = '';
-                        foreach ($siswa as $s) {
-                            if ((int) $s['id'] === $sid) {
-                                $nama = (string) $s['nama'];
-                                break;
-                            }
-                        }
-                        $terhalang[] = $nama . ' (sisa ' . max(0, $batasHarian - $terpakai) . ')';
-                    }
-                }
-            }
-            if ($terhalang !== []) {
-                $pesanGalat = 'Batas pengurangan ' . $batasHarian . ' poin/aspek/hari terlampaui untuk: '
-                    . implode(', ', array_slice($terhalang, 0, 4)) . '. Tidak ada catatan yang disimpan.';
+            /* Tidak ada lagi batas pengurangan harian. Pencegahan pencatatan
+               ganda memakai panel riwayat per tanggal di samping form. */
+            $unggah = unggah_bukti($_FILES['bukti'] ?? []);
+            if (!$unggah['ok']) {
+                $pesanGalat = $unggah['pesan'];
             } else {
-                $unggah = unggah_bukti($_FILES['bukti'] ?? []);
-                if (!$unggah['ok']) {
-                    $pesanGalat = $unggah['pesan'];
-                } else {
-                    db_transaksi(function () use (
-                        $semesterId, $pilih, $baris, $poin, $aspekId, $keterangan,
-                        $tanggal, $idGuru, $unggah
-                    ): void {
-                        foreach ($pilih as $sid) {
-                            tambah_catatan([
-                                'semester_id' => $semesterId,
-                                'siswa_id' => $sid,
-                                'katalog_id' => (int) $baris['id'],
-                                'aspek_id' => $aspekId,
-                                'poin' => $poin,
-                                'sumber' => 'manual',
-                                'pencatat_id' => $idGuru,
-                                'keterangan' => $keterangan !== '' ? $keterangan : null,
-                                'bukti_path' => $unggah['path'],
-                                'tanggal' => $tanggal,
-                            ]);
-                        }
-                    });
-                    if ($tingkat === 'berat') {
-                        foreach ($siswa as $s) {
-                            if (in_array((int) $s['id'], $pilih, true)) {
-                                notifikasi_pelanggaran_berat((int) $s['id'], (string) $s['nama'], (string) $baris['nama'], $poin);
-                            }
-                        }
-                    }
+                db_transaksi(function () use (
+                    $semesterId, $pilih, $baris, $poin, $aspekId, $keterangan,
+                    $tanggal, $idGuru, $unggah
+                ): void {
                     foreach ($pilih as $sid) {
-                        evaluasi_ambang_siswa($sid, $semesterId);
+                        tambah_catatan([
+                            'semester_id' => $semesterId,
+                            'siswa_id' => $sid,
+                            'katalog_id' => (int) $baris['id'],
+                            'aspek_id' => $aspekId,
+                            'poin' => $poin,
+                            'sumber' => 'manual',
+                            'pencatat_id' => $idGuru,
+                            'keterangan' => $keterangan !== '' ? $keterangan : null,
+                            'bukti_path' => $unggah['path'],
+                            'tanggal' => $tanggal,
+                        ]);
                     }
-                    log_akses('catat_poin_banyak', 'katalog_poin', (int) $baris['id']);
-                    flash(count($pilih) . ' catatan poin untuk ' . $baris['nama'] . ' tersimpan dalam satu transaksi.');
-                    alihkan('pages/guru/riwayat.php');
+                });
+                if ($tingkat === 'berat') {
+                    foreach ($siswa as $s) {
+                        if (in_array((int) $s['id'], $pilih, true)) {
+                            notifikasi_pelanggaran_berat((int) $s['id'], (string) $s['nama'], (string) $baris['nama'], $poin);
+                        }
+                    }
                 }
+                foreach ($pilih as $sid) {
+                    evaluasi_ambang_siswa($sid, $semesterId);
+                }
+                log_akses('catat_poin_banyak', 'katalog_poin', (int) $baris['id']);
+                flash(count($pilih) . ' catatan poin untuk ' . $baris['nama'] . ' tersimpan dalam satu transaksi.');
+                alihkan('pages/guru/riwayat.php');
             }
         }
     }
@@ -144,7 +124,7 @@ halaman_atas('Catat banyak siswa', 'Satu kejadian / banyak siswa', [
     <span><?= $siswa === [] ? 'Belum ada siswa aktif.' : 'Katalog poin manual belum tersedia.' ?> Minta admin melengkapi data.</span></div>
 <?php else: ?>
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-    <span>Pilih beberapa siswa, lalu satu kejadian. Batas pengurangan <strong><?= e($batasHarian) ?> poin per aspek per siswa per hari</strong> tetap berlaku; bila ada siswa yang melampauinya, seluruh penyimpanan dibatalkan.</span></div>
+    <span>Pilih beberapa siswa, lalu satu kejadian. <strong>Pengurangan poin tidak dibatasi.</strong> Periksa <strong>Catatan siswa pada tanggal ini</strong> di bawah sebelum menyimpan agar tidak ada siswa yang tercatat dua kali untuk pelanggaran yang sama.</span></div>
 
   <form class="kartu form-kartu" method="post" action="<?= e(url('pages/guru/catat_banyak.php')) ?>" enctype="multipart/form-data">
     <?= csrf_field() ?>
@@ -199,6 +179,7 @@ halaman_atas('Catat banyak siswa', 'Satu kejadian / banyak siswa', [
       <a class="tombol tombol-putih" href="<?= e(url('pages/guru/beranda.php')) ?>">Batal</a>
     </div>
   </form>
+  <?php kartu_riwayat_harian(true); ?>
 
   <script>
     (function () {

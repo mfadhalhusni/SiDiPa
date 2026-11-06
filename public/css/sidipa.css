@@ -186,6 +186,13 @@ textarea { min-height: 96px; resize: vertical; }
 .teks-sukses { color: #0b6b58; font-weight: 700; }
 .teks-galat { color: #a32620; font-weight: 700; }
 .siswa-disorot { background: var(--kuning) !important; }
+
+/* ---------- Daftar catatan harian (cegah pencatatan ganda) ---------- */
+#kartu-riwayat-harian [hidden] { display: none !important; }
+#kartu-riwayat-harian .tabel { font-size: .84rem; }
+#kartu-riwayat-harian .tabel td, #kartu-riwayat-harian .tabel th { padding: 7px 9px; }
+#riwayat-peringatan { font-weight: 700; }
+.baris-ganda { background: var(--kuning); font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .saran-opsi { transition: none; } }
 
 /* ---------- Pesan & status ----------------------------------------------- */

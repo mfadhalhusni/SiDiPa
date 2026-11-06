@@ -2,7 +2,7 @@
 
 Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan sertifikat digital untuk satu SMK. Dibuat untuk **shared hosting cPanel**: PHP 8.1+ tanpa framework, MySQL/MariaDB lewat PDO, HTML/CSS/JavaScript vanilla tanpa build step, tanpa Composer. Seluruh antarmuka berbahasa Indonesia dan bergaya **neo brutalism** buatan sendiri.
 
-> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16), serta **skala predikat 8 tingkat + username siswa untuk login** (bagian 17), **QR kartu berisi username + saran otomatis + bunyi bip pada scan** (bagian 18), dan **username bebas + saran siswa di seluruh halaman + Rincian angka disederhanakan** (bagian 19). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
+> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16), serta **skala predikat 8 tingkat + username siswa untuk login** (bagian 17), **QR kartu berisi username + saran otomatis + bunyi bip pada scan** (bagian 18), **username bebas + saran siswa di seluruh halaman + Rincian angka disederhanakan** (bagian 19), dan **pengurangan poin tanpa batas + daftar catatan per tanggal untuk mencegah pencatatan ganda** (bagian 20). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
 
 ---
 
@@ -26,7 +26,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | **Tahap 2 — Catat poin** | `pages/guru/catat_poin.php`: katalog manual, deskripsi wajib untuk sedang/berat, cap pengurangan 10/aspek/hari, unggah bukti JPG/PNG/WEBP ≤2 MB nama acak, notifikasi pelanggaran berat ke BK/kepsek/wali kelas, evaluasi ambang pembinaan |
 | **Tahap 2 — Riwayat & privasi** | `pages/guru/riwayat.php` (pembatalan mandiri ≤24 jam dengan alasan, catatan tidak dihapus), `pages/siswa/beranda.php`, `pages/siswa/riwayat.php` (hanya kategori, tanggal tanpa jam, poin, deskripsi; tanpa pencatat) |
 | **Tautan kartu lain** | `pages/guru/scan.php` + `api/scan.php` (QR berkelanjutan, fallback NIS, waktu server, jendela ibadah, tolak duplikat), `pages/guru/pembinaan.php`, `pages/guru/izin.php`, `pages/guru/penilaian.php`, `pages/guru/banding.php`, `pages/siswa/banding.php` |
-| **Catat banyak siswa (§10)** | `pages/guru/catat_banyak.php`: satu kejadian + satu tanggal + satu deskripsi untuk banyak siswa sekaligus, dalam **satu transaksi**. Bila satu siswa melampaui cap harian, seluruh batch dibatalkan |
+| **Catat banyak siswa (§10)** | `pages/guru/catat_banyak.php`: satu kejadian + satu tanggal + satu deskripsi untuk banyak siswa sekaligus, dalam **satu transaksi**. Tidak ada lagi cap harian (bagian 20); panel daftar catatan per tanggal membantu mencegah pencatatan ganda |
 | **Grafik mingguan siswa (§10)** | `grafik_mingguan_siswa()` di `app/laporan.php` + SVG inline pada `pages/siswa/beranda.php`: akumulasi poin 8 minggu terakhir, tanpa pustaka grafik eksternal |
 | **Tahap 3 — Kartu QR** | `pages/admin/kartu.php` dan `pages/siswa/kartu.php`: kartu **85,6 × 54 mm** memuat nama, NIS, **username login**, kelas, dan QR berisi **username siswa** (bukan NIS, bukan lagi `qr_token`). Cetak per kelas atau per siswa lewat `window.print()`; kartu lama wajib dicetak ulang (bagian 18) |
 | **Tahap 3 — Hari libur** | `pages/admin/hari_libur.php`: tambah satu tanggal atau rentang (maks. 93 hari), ubah keterangan, hapus. `cron/harian.php`, `cron/mingguan.php`, dan `api/scan.php` melewati tanggal ini |
@@ -170,7 +170,7 @@ sidipa/
 - Persentase = `skor / target_semester × 100`. Target bawaan 100 per aspek, dapat diubah admin.
 - Predikat per aspek: `>100` → **A+**, `90–100` → **A**, `75–89` → **B**, `60–74` → **C**, `0–59` → **D**, `<0` → **E**. Semua ambang ada di tabel `pengaturan`. **Beranda siswa** kini juga menampilkan **rata-rata keseluruhan + predikat keseluruhan** dari rata-rata persentase 6 aspek; sertifikat tetap memakai predikat per aspek (bagian 16).
 - Sumber otomatis (`sumber = sistem`): terlambat −2, alpa −5, tidak sholat −3 per sholat; bonus pagi +1 setiap 5 hari awal (maks +10/semester) dari cron mingguan; minggu bersih +2, minggu penuh dhuha +2, minggu penuh dhuhur +2. Besar poin diambil dari **Pengaturan → Bobot poin otomatis**; katalog poin dipakai untuk identitas kejadian dan untuk catatan manual.
-- Pembatas pengurangan manual per aspek per hari (bawaan 10) tersedia lewat `pengurangan_manual_harian()`. Izin, sakit, dan udzur tidak pernah mengurangi poin.
+- **Pengurangan poin tidak dibatasi** (bagian 20): pagar harian lama dihapus sehingga pelanggaran berat −15/−20/−25 dapat dicatat. Penggantinya adalah panel **Catatan siswa pada tanggal ini** yang menampilkan seluruh catatan (manual maupun otomatis) tepat saat siswa & tanggal dipilih. Izin, sakit, dan udzur tidak pernah mengurangi poin.
 - **Dilarang** menampilkan peringkat siswa dengan skor terendah. `siswa_teladan()` hanya menampilkan peringkat positif.
 
 ---
@@ -222,9 +222,9 @@ Pesan **tidak dikirim saat scan**; scan memasukkan baris ke `notifikasi_wa` deng
 - [x] Dashboard BK & kepala sekolah (kepsek hanya baca), laporan per kelas/aspek + XLSX, tindak lanjut dengan poin positif opsional
 - [x] Portal wali murid hanya menampilkan ringkasan anaknya; pencatat dan riwayat pelanggaran tidak pernah terkirim
 - [x] QR dibuat dan dipindai tanpa CDN, tersedia offline lewat service worker — `public/js/qr*.js`
-- [x] Mode **catat banyak siswa sekaligus untuk satu kejadian** (§10) dengan cap harian per siswa dan transaksi all-or-nothing — `pages/guru/catat_banyak.php`
+- [x] Mode **catat banyak siswa sekaligus untuk satu kejadian** (§10) dengan transaksi all-or-nothing + daftar catatan per tanggal (tanpa cap harian, bagian 20) — `pages/guru/catat_banyak.php`
 - [x] Dashboard siswa memuat **grafik perkembangan mingguan** SVG inline 8 minggu (§10), hanya angka agregat tanpa nama pencatat
-- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **17/17** uji tambahan + **55/55** uji pembaruan (termasuk sliding 30 hari) + **35/35** uji fitur siswa + **52/52** uji predikat & username + **61/61** uji scan/QR/saran + **92/92** uji username bebas & saran siswa = **451/451** lulus pada preview PHP 8.3 + MySQL 5.7
+- [x] Uji runtime menyeluruh: **126/126** halaman/alur Tahap 3–5 + **13/13** uji lanjutan + **18/18** uji tambahan + **55/55** uji pembaruan (termasuk sliding 30 hari) + **35/35** uji fitur siswa + **52/52** uji predikat & username + **61/61** uji scan/QR/saran + **92/92** uji username bebas & saran siswa + **51/51** uji tanpa batas & riwayat harian = **503/503** lulus pada preview PHP 8.3 + MySQL 5.7
 
 ---
 
@@ -300,7 +300,7 @@ Semua URL PWA relatif terhadap lokasi aplikasi: manifest memakai `scope: "./"`, 
 | Pendampingan BK | **BK → Tindak Lanjut**: pilih siswa, isi pemicu/tindakan/status; centang poin positif bila ada kegiatan perbaikan |
 | Wali murid | Buat akun peran **Wali murid** di *Pengguna*, tautkan di *Data siswa*. Portal hanya menampilkan ringkasan anaknya |
 
-**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **63 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak (termasuk penolakan cap harian), serta **451 pemeriksaan fungsional lulus (126 + 13 + 17 + 55 + 35 + 52 + 61 + 92)**, termasuk uji degradasi saat kolom `foto` belum ada, uji 8 batas predikat, uji QR username/saran otomatis/bunyi, dan uji username bebas + saran siswa di delapan halaman.
+**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **64 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak, serta **503 pemeriksaan fungsional lulus (126 + 13 + 18 + 55 + 35 + 52 + 61 + 92 + 51)**, termasuk uji degradasi saat kolom `foto` belum ada, uji 8 batas predikat, uji QR username/saran otomatis/bunyi, uji username bebas + saran siswa di delapan halaman, dan uji pelanggaran −25 tanpa batas + privasi endpoint riwayat harian.
 
 ---
 
@@ -531,7 +531,7 @@ UPDATE pengaturan SET nilai = '0'  WHERE kunci = 'predikat_d';
 
 ### 17.4 Uji coba
 
-Suite `.preview/tmpjs/uji_predikat_username.py` (**52/52**) memeriksa 8 batas predikat lewat beranda siswa (termasuk nilai > 100 %, 59 %, dan minus), ketiadaan predikat E, **8 ambang** di Pengaturan, legenda skala, login username vs penolakan NIS, field/tabel username di Data siswa, tombol migrasi massal, impor CSV dengan & tanpa kolom `username`, serta baris **Login** pada kartu QR. Regresi lengkap **saat bagian itu**: 352/352; setelah bagian 19 menjadi **451/451** (126 + 13 + 17 + 55 + 35 + 52 + 61 + 92) pada preview PHP 8.3.33 + MySQL 5.7.29, dengan 63 berkas PHP tanpa galat parsing.
+Suite `.preview/tmpjs/uji_predikat_username.py` (**52/52**) memeriksa 8 batas predikat lewat beranda siswa (termasuk nilai > 100 %, 59 %, dan minus), ketiadaan predikat E, **8 ambang** di Pengaturan, legenda skala, login username vs penolakan NIS, field/tabel username di Data siswa, tombol migrasi massal, impor CSV dengan & tanpa kolom `username`, serta baris **Login** pada kartu QR. Regresi lengkap **saat bagian itu**: 352/352; setelah bagian 19 **451/451** (126 + 13 + 17 + 55 + 35 + 52 + 61 + 92); setelah bagian 20 **503/503** pada preview PHP 8.3.33 + MySQL 5.7.29, dengan 64 berkas PHP tanpa galat parsing.
 
 ---
 
@@ -680,4 +680,61 @@ Sesuai pilihan, **baris "Rata-rata poin per aspek" dihapus** dari `pages/siswa/b
 
 ### 19.5 Uji coba
 
-Suite `.preview/tmpjs/uji_username_cari.py` (**92/92**) memeriksa username angka semua / huruf semua / huruf besar / spasi / simbol lewat form Data siswa, Pengguna, dan impor CSV; login memakai username angka; encode QR UTF-8; markup `kotak_cari_siswa()` pada delapan halaman; isi komponen JS; preflight `install.php`; fungsional pencarian tabel; dan tidak adanya baris "Rata-rata poin per aspek". **Regresi lengkap 451/451** = 126 + 13 + 17 + 55 + 35 + 52 + 61 + 92, dengan 63 berkas PHP tanpa galat parsing dan `node --check` bersih untuk `sidipa.js`, `cari-siswa.js`, `qr-sidipa.js`. Suite lokal ini tidak di-commit (`.preview/` diabaikan Git).
+Suite `.preview/tmpjs/uji_username_cari.py` (**92/92**) memeriksa username angka semua / huruf semua / huruf besar / spasi / simbol lewat form Data siswa, Pengguna, dan impor CSV; login memakai username angka; encode QR UTF-8; markup `kotak_cari_siswa()` pada delapan halaman; isi komponen JS; preflight `install.php`; fungsional pencarian tabel; dan tidak adanya baris "Rata-rata poin per aspek". Regresi lengkap **saat bagian itu 451/451**; setelah bagian 20 **503/503**, dengan 64 berkas PHP tanpa galat parsing dan `node --check` bersih untuk `sidipa.js`, `cari-siswa.js`, `qr-sidipa.js`. Suite lokal ini tidak di-commit (`.preview/` diabaikan Git).
+
+---
+
+## 20. Pengurangan poin tanpa batas + daftar catatan per tanggal
+
+### 20.1 Mengapa pagar harian dihapus
+
+Sejak awal ada pengaturan `batas_pengurangan_harian` (bawaan **10 poin per aspek per siswa per hari**) yang membatasi **hanya** catatan `sumber='manual'`. Sementara katalog bawaan `database.sql` memuat pelanggaran **berat** yang lebih besar dari itu:
+
+| Katalog | Poin | Aspek |
+| --- | --- | --- |
+| `JUJ_AMBIL` Mengambil barang milik orang lain | −25 | Kejujuran |
+| `TIM_BULLYING` Perundungan (bullying) | −25 | Kerja Sama Tim |
+| `DIS_KELAHI` Berkelahi | −20 | Kedisiplinan |
+| `DIS_ROKOK` Merokok / membawa rokok | −20 | Kedisiplinan |
+| `DIS_RUSAK` Merusak fasilitas sekolah | −15 | Kedisiplinan |
+| `JUJ_PALSU` Memalsukan tanda tangan | −15 | Kejujuran |
+| `JUJ_MENYONTEK`, `SOL_ADU_DOMBA`, `SOL_HAKIM` | −10 | Kejujuran / Penyelesaian Masalah |
+
+Pemeriksaan lama berbentuk `terpakai + |poin| > 10`, sehingga **−25 selalu ditolak walau kuota masih penuh**, dengan pesan yang kontradiktif (*"Sisa hari ini: 10 poin"*). Tiga katalog −10 juga hanya bisa dipakai bila kuota masih utuh. Sesuai permintaan, **pagar ini dihapus sepenuhnya**: tidak ada lagi batas jumlah/besar pengurangan, dan pelanggaran berat dapat dicatat apa adanya. Validasi lain tetap berjalan (katalog aktif & manual, poin bulat −100…100, deskripsi wajib untuk tingkat sedang/berat, CSRF, transaksi all-or-nothing).
+
+### 20.2 Pengganti pagar: daftar catatan per tanggal
+
+Pengaman terhadap **pencatatan ganda** bukan lagi angka, melainkan informasi yang muncul **tepat saat guru memilih siswa dan tanggal**:
+
+- Panel **"Catatan siswa pada tanggal ini"** (`kartu_riwayat_harian()` di `app/layout.php`) ditambahkan di bawah form **Catat poin** dan **Catat banyak siswa**.
+- `public/js/riwayat-harian.js` memuat ulang daftar secara otomatis saat: siswa dipilih dari saran, tanggal diubah, checkbox siswa berubah (termasuk **Pilih semua** / siswa dari saran), dan kejadian katalog diganti.
+- Sumber datanya `api/riwayat_harian.php` → `riwayat_harian_siswa()` di `app/skor.php`: **seluruh** `catatan_poin` untuk siswa & tanggal itu — manual guru mana pun, otomatis (scan/cron), penilaian bulanan, dan catatan yang sudah **dibatalkan** (tetap ditampilkan agar tidak dicatat ulang).
+- Kolom: jam, kejadian, aspek, poin, sumber, status; pada mode **Catat banyak** ditambah kolom **Siswa**. Ringkasan *"N catatan · total pengurangan aktif X poin"* bersifat **informasi, bukan batas**.
+- Bila kejadian yang sedang dipilih di dropdown katalog **sudah tercatat** untuk siswa itu pada tanggal itu, barisnya **disorot** dan muncul peringatan *"kejadian yang sama sudah tercatat hari ini…"*. Peringatan ini **tidak memblokir** — guru tetap memutuskan.
+- Siswa & tanggal terakhir disimpan di `sessionStorage`, sehingga saat guru kembali dari halaman Riwayat setelah menyimpan, entri yang baru saja dicatat langsung terlihat.
+
+### 20.3 Privasi & keamanan
+
+- Endpoint mewajibkan sesi, **CSRF**, metode GET, tanggal valid (`YYYY-MM-DD`), dan membatasi maksimal **60 ID siswa** per permintaan.
+- Akun **siswa/wali** hanya bisa membaca `siswa_id` yang terhubung dengan akunnya; `admin`/`bk`/`kepsek`/`guru` boleh membaca siswa aktif. Peran lain ditolak 403.
+- **Tidak pernah** mengirim `pencatat_id`, nama pencatat, `keterangan` bebas, bukti foto, atau nomor WA. Identitas pencatat tetap hanya bisa dilihat admin lewat `lihat_pencatat()`. Panel juga menampilkan catatan guru lain **tanpa** menyebut siapa yang menulis — cukup untuk tahu bahwa pelanggaran sudah tercatat.
+- Baris `pengaturan` lama `batas_pengurangan_harian` sengaja **dibiarkan** di `database.sql` sebagai data warisan (ditandai komentar) dan **dihapus dari form Pengaturan** supaya admin tidak melihat kontrol yang sudah tidak berfungsi.
+
+### 20.4 Berkas & database yang perlu diganti
+
+| Berkas | Wajib? | Isi perubahan |
+| --- | --- | --- |
+| `app/skor.php` | **WAJIB** | `pengurangan_manual_harian()` → `riwayat_harian_siswa()` |
+| `api/riwayat_harian.php` **(baru)** | **WAJIB** | endpoint JSON daftar catatan per siswa + tanggal |
+| `public/js/riwayat-harian.js` **(baru)** | **WAJIB** | panel yang memperbarui diri + peringatan kejadian ganda |
+| `pages/guru/catat_poin.php`, `pages/guru/catat_banyak.php` | **WAJIB** | hapus cabang penolakan pagar; pasang panel; perbarui teks bantuan |
+| `app/layout.php` | **WAJIB** | `kartu_riwayat_harian()` + memuat `riwayat-harian.js` |
+| `public/css/sidipa.css` | Disarankan | gaya panel, sorotan baris ganda, `[hidden]` |
+| `pages/admin/pengaturan.php`, `database.sql`, `README.md` | Disarankan | hapus kontrol usang, tandai baris warisan, dokumentasi |
+
+**Database: TIDAK ADA MIGRASI / `ALTER TABLE`.** Tidak ada tabel/kolom baru; `catatan_poin` sudah punya `tanggal`, `sumber`, `status`, `katalog_id`, dan indeks `idx_catatan_tanggal`. Instalasi lama cukup mengunggah berkas di atas — baris `pengaturan` lama boleh tetap ada (tidak berpengaruh).
+
+### 20.5 Uji coba
+
+Suite `.preview/tmpjs/uji_riwayat_harian.py` (**51/51**) memeriksa hilangnya pagar di sumber & halaman, markup panel pada kedua menu, isi komponen JS, **penyimpanan pelanggaran −25 yang kini berhasil**, pengelompokan beberapa siswa, ikut tampilnya catatan otomatis dan catatan dibatalkan, penolakan tanpa CSRF (403) / tanggal invalid (422), pembatasan privasi akun siswa, serta tidak adanya identitas pencatat dalam respons. Uji lama `uji_tambahan.py` diperbarui menjadi **18/18** (batch −20 kini tersimpan, bukan ditolak). **Regresi lengkap 503/503** = 126 + 13 + 18 + 55 + 35 + 52 + 61 + 92 + 51, dengan **64 berkas PHP tanpa galat parsing** dan `node --check` bersih untuk empat skrip JS aplikasi. Suite lokal tidak di-commit (`.preview/` diabaikan Git).
+

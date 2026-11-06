@@ -264,18 +264,83 @@ function lihat_pencatat(int $catatanId): ?array
     );
 }
 
-/** Pembatas pengurangan manual per aspek per hari (default 10 poin). */
-function pengurangan_manual_harian(int $siswaId, int $aspekId, string $tanggal): int
+/**
+ * DAFTAR catatan poin sejumlah siswa pada SATU tanggal. Dipakai panel
+ * "Catatan siswa pada tanggal ini" agar guru melihat pelanggaran yang sudah
+ * tercatat (termasuk yang ditulis guru lain) sebelum menyimpan, sehingga
+ * tidak ada pencatatan ganda. Tidak ada lagi pembatas/pagar jumlah poin.
+ *
+ * PRIVASI: sengaja TIDAK mengirim pencatat_id maupun nama pencatat —
+ * identitas pencatat hanya boleh dilihat admin lewat lihat_pencatat().
+ */
+function riwayat_harian_siswa(array $siswaIds, string $tanggal): array
 {
-    $jumlah = db_nilai(
-        "SELECT COALESCE(SUM(CASE WHEN poin < 0 THEN -poin ELSE 0 END), 0)
-         FROM catatan_poin
-         WHERE siswa_id = ? AND aspek_id = ? AND tanggal = ?
-           AND sumber = 'manual' AND status = 'aktif'",
-        [$siswaId, $aspekId, $tanggal],
-        0
+    $ids = array_values(array_unique(array_filter(array_map('intval', $siswaIds))));
+    $ids = array_slice($ids, 0, 60);
+    if ($ids === []) {
+        return [];
+    }
+    $tanda = implode(',', array_fill(0, count($ids), '?'));
+    $daftarSiswa = db_semua(
+        'SELECT s.id, s.nis, s.nama, COALESCE(k.nama, \'-\') AS kelas
+         FROM siswa s LEFT JOIN kelas k ON k.id = s.kelas_id
+         WHERE s.id IN (' . $tanda . ') AND s.aktif = 1',
+        $ids
     );
-    return (int) $jumlah;
+    $kelompok = [];
+    foreach ($daftarSiswa as $s) {
+        $kelompok[(int) $s['id']] = [
+            'id' => (int) $s['id'],
+            'nis' => (string) $s['nis'],
+            'nama' => (string) $s['nama'],
+            'kelas' => (string) $s['kelas'],
+            'catatan' => [],
+            'total_pengurangan' => 0,
+            'jumlah_pelanggaran' => 0,
+        ];
+    }
+    if ($kelompok === []) {
+        return [];
+    }
+    $param = array_merge($ids, [$tanggal]);
+    $baris = db_semua(
+        'SELECT c.id, c.siswa_id, c.katalog_id, c.poin, c.sumber, c.status,
+                c.dibuat_pada, kp.nama AS kejadian, a.nama AS aspek
+         FROM catatan_poin c
+         JOIN aspek a ON a.id = c.aspek_id
+         LEFT JOIN katalog_poin kp ON kp.id = c.katalog_id
+         WHERE c.siswa_id IN (' . $tanda . ') AND c.tanggal = ?
+         ORDER BY c.dibuat_pada DESC, c.id DESC LIMIT 300',
+        $param
+    );
+    foreach ($baris as $c) {
+        $sid = (int) $c['siswa_id'];
+        if (!isset($kelompok[$sid])) {
+            continue;
+        }
+        $poin = (int) $c['poin'];
+        $sumber = (string) $c['sumber'];
+        $kejadian = $c['kejadian'] !== null ? (string) $c['kejadian'] : '';
+        if ($kejadian === '') {
+            $kejadian = $sumber === 'berkala' ? 'Penilaian bulanan' : 'Catatan sistem';
+        }
+        $waktu = strtotime((string) $c['dibuat_pada']);
+        $kelompok[$sid]['catatan'][] = [
+            'id' => (int) $c['id'],
+            'katalog_id' => $c['katalog_id'] !== null ? (int) $c['katalog_id'] : null,
+            'jam' => $waktu !== false ? date('H:i', $waktu) : '-',
+            'kejadian' => $kejadian,
+            'aspek' => (string) $c['aspek'],
+            'poin' => $poin,
+            'sumber' => $sumber,
+            'status' => (string) $c['status'],
+        ];
+        if ($c['status'] === 'aktif' && $poin < 0) {
+            $kelompok[$sid]['total_pengurangan'] += abs($poin);
+            $kelompok[$sid]['jumlah_pelanggaran'] += 1;
+        }
+    }
+    return array_values($kelompok);
 }
 
 /** Tambah catatan poin (dipakai halaman guru, cron, penilaian bulanan, banding). */

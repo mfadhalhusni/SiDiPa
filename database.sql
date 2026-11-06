@@ -474,6 +474,8 @@ INSERT IGNORE INTO pengaturan (kunci, nilai, grup) VALUES
  ('poin_bonus_pagi', '1', 'poin'),
  ('bonus_pagi_setiap_hari', '5', 'poin'),
  ('bonus_pagi_maks', '10', 'poin'),
+ -- Warisan sejak bagian 20: pagar pengurangan harian DIHAPUS, baris ini
+ -- sengaja dibiarkan (INSERT IGNORE) agar instalasi lama tidak perlu migrasi.
  ('batas_pengurangan_harian', '10', 'poin'),
  -- Skala 8 tingkat: A+ 95, A 90, B+ 85, B 80, B- 75, C+ 70, C 60, D < 60.
  ('predikat_aplus', '95', 'predikat'),

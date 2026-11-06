@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/* Catat poin manual guru: katalog + cap harian + bukti + notifikasi berat. */
+/* Catat poin manual guru: katalog + bukti + notifikasi berat + cegah ganda. */
 
 require_once __DIR__ . '/../../app/bootstrap.php';
 
@@ -10,7 +10,6 @@ cek_input_semester();
 $idGuru = (int) $pengguna['id'];
 $semester = semester_wajib();
 $semesterId = (int) $semester['id'];
-$batasHarian = (int) pengaturan('batas_pengurangan_harian', '10');
 $pesanGalat = '';
 $katalog = db_semua(
     'SELECT kp.id, kp.kode, kp.nama, kp.poin, kp.jenis, kp.tingkat, kp.wajib_keterangan,
@@ -49,12 +48,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $pesanGalat = 'Kejadian tingkat ' . $tingkat . ' wajib menyertakan deskripsi.';
         } elseif (!in_array((int) $poin, range(-100, 100), true)) {
             $pesanGalat = 'Nilai poin katalog tidak valid (harus bilangan bulat).';
-        } elseif ($poin < 0
-            && pengurangan_manual_harian($siswaId, $aspekId, $tanggal) + abs($poin) > $batasHarian) {
-            $pesanGalat = 'Batas pengurangan manual ' . $batasHarian
-                . ' poin per aspek per hari terlampaui. Sisa hari ini: '
-                . max(0, $batasHarian - pengurangan_manual_harian($siswaId, $aspekId, $tanggal)) . ' poin.';
         } else {
+            /* Tidak ada lagi batas pengurangan harian. Pencegahan ganda
+               dilakukan lewat panel "Catatan siswa pada tanggal ini". */
             $unggah = unggah_bukti($_FILES['bukti'] ?? []);
             if (!$unggah['ok']) {
                 $pesanGalat = $unggah['pesan'];
@@ -148,13 +144,14 @@ halaman_atas('Catat poin', 'Beranda guru / Catat poin', [
       </div>
     </div>
     <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-      <span>Batas pengurangan manual: <strong><?= $batasHarian ?> poin per aspek per siswa per hari</strong>. Poin positif tidak dibatasi.</span>
+      <span><strong>Pengurangan poin tidak dibatasi</strong>, termasuk pelanggaran berat (−15, −20, −25). Sebelum menyimpan, periksa <strong>Catatan siswa pada tanggal ini</strong> di bawah agar pelanggaran tidak tercatat dua kali.</span>
     </div>
     <div class="form-aksi">
       <button class="tombol tombol-utama" type="submit"><?= ikon('simpan', 20) ?> Simpan poin</button>
       <a class="tombol tombol-putih" href="<?= e(url('pages/guru/beranda.php')) ?>">Batal</a>
     </div>
   </form>
+  <?php kartu_riwayat_harian(false); ?>
   <script>
     (function () {
       var pilih = document.querySelector('[data-pilih-poin]');
