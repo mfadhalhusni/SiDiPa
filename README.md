@@ -2,7 +2,7 @@
 
 Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan sertifikat digital untuk satu SMK. Dibuat untuk **shared hosting cPanel**: PHP 8.1+ tanpa framework, MySQL/MariaDB lewat PDO, HTML/CSS/JavaScript vanilla tanpa build step, tanpa Composer. Seluruh antarmuka berbahasa Indonesia dan bergaya **neo brutalism** buatan sendiri.
 
-> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16), serta **skala predikat 8 tingkat + username siswa untuk login** (bagian 17), **QR kartu berisi username + saran otomatis + bunyi bip pada scan** (bagian 18), **username bebas + saran siswa di seluruh halaman + Rincian angka disederhanakan** (bagian 19), dan **pengurangan poin tanpa batas + daftar catatan per tanggal untuk mencegah pencatatan ganda** (bagian 20). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
+> Dokumen ini mengikuti instruksi `Prompt_Generate_Website_SiDiPa.pdf`. Pembangunan dilakukan bertahap sesuai **bagian 15** PDF. Status saat ini: **Tahap 1, 2, 3, 4, dan 5 selesai**, ditambah **PWA penuh**, pustaka QR lokal untuk cetak/scan tanpa CDN, serta pembaruan: guru menilai seluruh siswa tanpa penugasan kelas, login cukup sekali (tersimpan 30 hari), semua laporan diunduh sebagai **XLSX** (bagian 15), dan **beranda siswa + sertifikat + foto profil** diperbarui (bagian 16), serta **skala predikat 8 tingkat + username siswa untuk login** (bagian 17), **QR kartu berisi username + saran otomatis + bunyi bip pada scan** (bagian 18), **username bebas + saran siswa di seluruh halaman + Rincian angka disederhanakan** (bagian 19), **pengurangan poin tanpa batas + daftar catatan per tanggal untuk mencegah pencatatan ganda** (bagian 20), dan **sertifikat siswa menjadi 2 halaman: surat pernyataan + deskripsi penilaian** (bagian 21). Semua kartu beranda guru sudah menuju halaman yang benar-benar berfungsi.
 
 ---
 
@@ -32,7 +32,7 @@ Sistem penilaian karakter siswa berbasis poin, kehadiran barcode (QR), dan serti
 | **Tahap 3 — Hari libur** | `pages/admin/hari_libur.php`: tambah satu tanggal atau rentang (maks. 93 hari), ubah keterangan, hapus. `cron/harian.php`, `cron/mingguan.php`, dan `api/scan.php` melewati tanggal ini |
 | **Tahap 3 — Rekap kehadiran** | `app/laporan.php` + `pages/umum/rekap_kehadiran.php`: harian, bulanan, dan semester per siswa **dan** per kelas (hadir, hadir awal, terlambat, izin, sakit, alpa, % kehadiran) dengan **unduh XLSX** 3 lembar (Rekap Siswa, Ringkasan Kelas, Keterangan). Hak akses di server: siswa/wali hanya anaknya, guru menjangkau seluruh siswa aktif |
 | **Tahap 4 — Semester** | `pages/admin/sertifikat.php`: tambah semester, aktifkan (skor kembali 0), **tutup periode input**, buka kembali. `cek_input_semester()` membekukan catat poin, scan, izin, dan penilaian bulanan saat periode tertutup |
-| **Tahap 4 — Sertifikat** | Penerbitan per kelas/semua, kode **`SDP-TAHUNSEM-NIS-ACAK4`**, snapshot `data_json` yang tidak berubah, antrean WA, pembatalan dengan alasan + pelaku + waktu, `pages/umum/cetak_sertifikat.php` (**A4 landscape**, tabel 6 aspek, logo, tanda tangan, QR verifikasi). Tombol cetak siswa/wali hanya aktif saat status `terbit` **dan** semester sudah berganti; sebelumnya sertifikat hanya bisa dilihat (bagian 16). `verifikasi.php` kini menyediakan pembatalan khusus admin |
+| **Tahap 4 — Sertifikat** | Penerbitan per kelas/semua, kode **`SDP-TAHUNSEM-NIS-ACAK4`**, snapshot `data_json` yang tidak berubah, antrean WA, pembatalan dengan alasan + pelaku + waktu. `pages/umum/cetak_sertifikat.php` kini menghasilkan **2 halaman A4 landscape**: halaman 1 **surat pernyataan** *"Raport Penilaian Karakter Siswa ini diberikan kepada … dengan nilai rata-rata karakter …"* (logo, QR verifikasi, tanda tangan), halaman 2 **deskripsi penilaian** (tabel 6 aspek + keterangan), lihat **bagian 21**. Tombol cetak siswa/wali hanya aktif saat status `terbit` **dan** semester sudah berganti; sebelumnya sertifikat hanya bisa dilihat (bagian 16). `verifikasi.php` kini menyediakan pembatalan khusus admin |
 | **Tahap 4 — BK & kepsek** | `pages/bk/beranda.php`, `pages/kepsek/beranda.php` (**hanya baca**), `pages/bk/tindak_lanjut.php` (tindak lanjut + poin positif opsional), `pages/umum/laporan.php` (ringkasan per kelas/per aspek + unduh XLSX 3 lembar) |
 | **Tahap 5 — Portal wali** | `pages/wali/beranda.php`: hanya baca ringkasan anaknya (skor 6 aspek, kehadiran bulan ini, sertifikat, kartu QR). Admin menghubungkan akun lewat **Data siswa → Akun portal wali murid** |
 | **Pustaka QR lokal** | `public/js/qrcode.min.js` (qrcode-generator, MIT), `public/js/html5-qrcode.min.js` (Apache-2.0), `public/js/qr-sidipa.js`. Disertakan sebagai berkas statis, di-precache service worker, sehingga cetak dan scan tetap berfungsi tanpa akses CDN |
@@ -131,7 +131,7 @@ sidipa/
 ├── public/js/html5-qrcode.min.js  # Pemindai kamera (Apache-2.0)
 ├── public/js/qr-sidipa.js    # Render [data-qr] + tombol cetak
 ├── public/css/kartu.css      # @page 85,6 × 54 mm
-├── public/css/cetak.css      # @page A4 landscape
+├── public/css/cetak.css      # @page A4 landscape, 2 halaman (bagian 21)
 ├── public/img/icon-*.png     # Ikon 192/512/maskable/apple/favicon
 ├── app/
 │   ├── bootstrap.php         # Muat konfigurasi, sesi, penangan galat
@@ -217,7 +217,7 @@ Pesan **tidak dikirim saat scan**; scan memasukkan baris ke `notifikasi_wa` deng
 - [x] Hari libur dikelola admin dan dilewati cron/scan — `pages/admin/hari_libur.php`
 - [x] Rekap kehadiran harian/bulanan/semester per siswa dan per kelas + unduh XLSX — `app/laporan.php`, `app/xlsx.php`
 - [x] Admin menutup periode input; catat poin, scan, izin, dan penilaian bulanan dibekukan — `cek_input_semester()`
-- [x] Sertifikat siswa/wali hanya dapat dicetak setelah `terbit` **dan** semester berganti; kode `SDP-...`, snapshot JSON, QR verifikasi, tanda tangan, A4 landscape — `pages/umum/cetak_sertifikat.php`
+- [x] Sertifikat siswa/wali hanya dapat dicetak setelah `terbit` **dan** semester berganti; kode `SDP-...`, snapshot JSON, QR verifikasi, tanda tangan, **2 halaman A4 landscape** (pernyataan + deskripsi penilaian) — `pages/umum/cetak_sertifikat.php` (bagian 21)
 - [x] Admin membatalkan sertifikat (dari menu admin maupun verifikasi publik) dengan alasan, pelaku, dan waktu; verifikasi publik berubah menjadi "dibatalkan"
 - [x] Dashboard BK & kepala sekolah (kepsek hanya baca), laporan per kelas/aspek + XLSX, tindak lanjut dengan poin positif opsional
 - [x] Portal wali murid hanya menampilkan ringkasan anaknya; pencatat dan riwayat pelanggaran tidak pernah terkirim
@@ -293,14 +293,14 @@ Semua URL PWA relatif terhadap lokasi aplikasi: manifest memakai `scope: "./"`, 
 | Tandai libur sekolah | **Admin → Hari Libur** → isi tanggal/rentang + keterangan. Cron harian/mingguan dan scan melewati tanggal tersebut |
 | Rekap kehadiran | **Rekap Kehadiran** → pilih Harian / Bulanan / Semester, kelas (bila berhak), lalu **Unduh XLSX** |
 | Akhir semester | **Admin → Semester & Sertifikat** → **Tutup** semester berjalan (input poin/scan/izin/penilaian langsung dibekukan) → **Terbitkan sertifikat** per kelas atau semua |
-| Cetak sertifikat | Siswa/wali: **Sertifikat saya → Lihat** selama semester masih berjalan; setelah admin mengaktifkan semester baru muncul tombol **Cetak** (A4 landscape). Admin/BK/kepsek tetap dapat mencetak kapan saja |
+| Cetak sertifikat | Siswa/wali: **Sertifikat saya → Lihat** selama semester masih berjalan; setelah admin mengaktifkan semester baru muncul tombol **Cetak** yang menghasilkan **2 halaman A4 landscape** (halaman 1 surat pernyataan, halaman 2 deskripsi penilaian). Cetak dengan skala 100% dan header/footer browser dimatikan. Admin/BK/kepsek tetap dapat mencetak kapan saja |
 | Verifikasi eksternal | Pindai QR di sertifikat atau buka `verifikasi.php?kode=...`; tanpa login, hanya status + identitas + skor per aspek |
 | Sertifikat salah | Admin membatalkan lewat daftar sertifikat **atau** halaman verifikasi publik, wajib alasan. Status publik berubah jadi *dibatalkan* dan tombol cetak nonaktif |
 | Semester baru | **Tambah semester** → **Aktifkan**. Skor kembali 0 karena semua perhitungan memakai `semester_id`; data lama tetap tersimpan |
 | Pendampingan BK | **BK → Tindak Lanjut**: pilih siswa, isi pemicu/tindakan/status; centang poin positif bila ada kegiatan perbaikan |
 | Wali murid | Buat akun peran **Wali murid** di *Pengguna*, tautkan di *Data siswa*. Portal hanya menampilkan ringkasan anaknya |
 
-**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **64 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak, serta **503 pemeriksaan fungsional lulus (126 + 13 + 18 + 55 + 35 + 52 + 61 + 92 + 51)**, termasuk uji degradasi saat kolom `foto` belum ada, uji 8 batas predikat, uji QR username/saran otomatis/bunyi, uji username bebas + saran siswa di delapan halaman, dan uji pelanggaran −25 tanpa batas + privasi endpoint riwayat harian.
+**Uji coba yang sudah dijalankan** pada preview PHP 8.3.33 + MySQL 5.7.29: **64 file PHP tanpa galat parsing**, seluruh halaman 200 untuk enam peran, ekspor XLSX (divalidasi `openpyxl`: 3 lembar, 20 siswa, sel numerik), tutup/buka semester, terbitkan/batalkan sertifikat, cetak A4, QR verifikasi, idempotensi cron dua kali, mode catat banyak, serta **503 pemeriksaan fungsional lulus (126 + 13 + 18 + 55 + 35 + 52 + 61 + 92 + 51)**, termasuk uji degradasi saat kolom `foto` belum ada, uji 8 batas predikat, uji QR username/saran otomatis/bunyi, uji username bebas + saran siswa di delapan halaman, dan uji pelanggaran −25 tanpa batas + privasi endpoint riwayat harian. **Bagian 21** divalidasi terpisah dengan **81/81 pemeriksaan** pada preview PHP 8.3 + MySQL 5.7 yang dibangun ulang: struktur 2 halaman, kalimat pernyataan, nilai rata-rata karakter, fallback sertifikat lama, penahanan cetak siswa/wali, pembukaan cetak setelah semester berganti, sertifikat dibatalkan, verifikasi publik, dan snapshot versi 2 dari database nyata.
 
 ---
 
@@ -737,4 +737,54 @@ Pengaman terhadap **pencatatan ganda** bukan lagi angka, melainkan informasi yan
 ### 20.5 Uji coba
 
 Suite `.preview/tmpjs/uji_riwayat_harian.py` (**51/51**) memeriksa hilangnya pagar di sumber & halaman, markup panel pada kedua menu, isi komponen JS, **penyimpanan pelanggaran −25 yang kini berhasil**, pengelompokan beberapa siswa, ikut tampilnya catatan otomatis dan catatan dibatalkan, penolakan tanpa CSRF (403) / tanggal invalid (422), pembatasan privasi akun siswa, serta tidak adanya identitas pencatat dalam respons. Uji lama `uji_tambahan.py` diperbarui menjadi **18/18** (batch −20 kini tersimpan, bukan ditolak). **Regresi lengkap 503/503** = 126 + 13 + 18 + 55 + 35 + 52 + 61 + 92 + 51, dengan **64 berkas PHP tanpa galat parsing** dan `node --check` bersih untuk empat skrip JS aplikasi. Suite lokal tidak di-commit (`.preview/` diabaikan Git).
+
+---
+
+## 21. Sertifikat siswa menjadi 2 halaman
+
+### 21.1 Isi kedua halaman
+
+**Halaman 1 — surat pernyataan (A4 landscape, tetap berbingkai sertifikat)**
+
+Kop sekolah → penanda *Halaman 1 dari 2 · Surat Pernyataan* → judul **Raport Penilaian Karakter Siswa** → kalimat:
+
+> **Raport Penilaian Karakter Siswa** ini diberikan kepada:
+> **NAMA SISWA** (ditengah, huruf besar tebal)
+> NIS …, kelas …, pada Semester … tahun ajaran …, dengan **nilai rata-rata karakter 80,0%** dan predikat **B** dari 6 aspek penilaian karakter.
+> Keterangan predikat: Baik.
+> Deskripsi penilaian per aspek sebagaimana tercantum pada **halaman 2** yang merupakan bagian tidak terpisahkan dari sertifikat ini.
+
+Di bawahnya tetap ada **QR verifikasi publik + kode sertifikat**, tanda tangan **wali kelas** dan **kepala sekolah**, serta tanggal terbit.
+
+**Halaman 2 — deskripsi penilaian (A4 landscape)**
+
+Kop sekolah → penanda *Halaman 2 dari 2 · Deskripsi Penilaian* → judul **Deskripsi Penilaian Karakter** → identitas siswa (nama, NIS, kelas, semester) → tabel **6 aspek** dengan kolom aspek, skor/target, persentase, predikat, dan **Keterangan / deskripsi** → ringkasan nilai rata-rata karakter + predikat keseluruhan + penjelasan bahwa predikat tabel dihitung per aspek → footer berisi **kode sertifikat** dan penanda halaman, supaya lembar ke-2 tetap dikenali bila terpisah. QR dan tanda tangan **cukup di halaman 1**.
+
+### 21.2 Nilai rata-rata karakter
+
+Sumbernya `ringkasan_skor_siswa()` di `app/skor.php`: **rata-rata persentase dari 6 aspek** (bobot sama, sesuai keputusan bagian 16), dibulatkan 1 desimal dengan pemisah koma, lalu dipasangkan dengan **predikat keseluruhan** dari 8 tingkat `A+ … D` dan keterangannya. Predikat **per aspek** tetap dipakai pada tabel halaman 2.
+
+`snapshot_sertifikat()` kini membekukan agregat itu ke kunci **`ringkasan`** dalam `data_json` (`versi => 2`), sehingga nilai yang tercetak tidak berubah bila ambang predikat atau catatan poin diubah setelah penerbitan — prinsip snapshot permanen tetap dipertahankan. **Sertifikat lama (versi 1, tanpa `ringkasan`) tetap bisa dicetak**: `cetak_sertifikat.php` menghitung ulang agregat dari persentase per aspek yang sudah tersimpan di snapshot lama. Tidak ada perubahan data sertifikat yang sudah terbit.
+
+### 21.3 Cetak & keamanan
+
+- `public/css/cetak.css`: `@page { size: A4 landscape; margin: 10mm }`; saat cetak tiap `<article>` berukuran tetap `184mm`, `break-inside: avoid`, dan `.halaman-2` memakai `break-before: page`, sehingga hasilnya **tepat 2 halaman**. Di layar kedua lembar tampil bertumpuk.
+- Petunjuk cetak diperbarui menjadi *"2 halaman A4 landscape, skala 100%, matikan header/footer browser"*; label tombol menjadi **"Cetak / Simpan PDF (2 halaman)"**.
+- **Aturan lama tidak berubah:** hanya status `terbit` yang boleh dicetak; siswa/wali **hanya bisa melihat** sampai admin mengaktifkan semester baru (termasuk akses URL langsung dan Ctrl+P — `body.cetak-terkunci .kertas-sertifikat` menyembunyikan **kedua** halaman); admin/BK/kepsek dapat mencetak kapan saja. Tidak ada identitas pencatat, nomor WA, bukti, maupun keterangan bebas yang ikut tercetak. `verifikasi.php` publik tetap hanya membaca kunci `aspek`.
+
+### 21.4 Berkas & database yang perlu diganti
+
+| Berkas | Wajib? | Isi perubahan |
+| --- | --- | --- |
+| `pages/umum/cetak_sertifikat.php` | **WAJIB** | dua `<article>` (pernyataan + deskripsi), fallback `ringkasan`, petunjuk & label tombol |
+| `app/sertifikat.php` | **WAJIB** | `snapshot_sertifikat()` menyimpan `ringkasan` dan menaikkan `versi` ke 2 |
+| `public/css/cetak.css` | **WAJIB** | gaya halaman 1/2, ukuran lembar tetap, `break-before: page`, penahanan cetak untuk dua halaman |
+| `pages/siswa/sertifikat.php`, `pages/admin/sertifikat.php`, `pages/wali/beranda.php` | Disarankan | petunjuk bahwa sertifikat terdiri dari 2 halaman |
+| `README.md` | Disarankan | dokumentasi bagian 21 |
+
+**Database: TIDAK ADA MIGRASI / `ALTER TABLE`.** Kolom `sertifikat.data_json` sudah `LONGTEXT`; cukup ganti berkas. Sertifikat yang sudah terbit **tidak perlu diterbitkan ulang** — fallback versi 1 menanganinya. Hanya sertifikat yang diterbitkan **setelah** pembaruan ini yang menyimpan `ringkasan` (versi 2).
+
+### 21.5 Uji coba
+
+Suite `.preview/tmpjs/uji_sertifikat_2hal.py` (**81/81**) memeriksa markup & CSS dua halaman, kalimat pernyataan berikut nama/nilai rata-rata/predikat, enam baris aspek pada halaman 2, QR dan dua tanda tangan hanya di halaman 1, fallback sertifikat versi 1 (80,0% / B), penahanan cetak siswa & wali, pembukaan cetak setelah semester aktif berganti, sertifikat dibatalkan tanpa kertas tercetak, verifikasi publik, halaman daftar sertifikat untuk tiga peran, dan `snapshot_sertifikat()` versi 2 yang dijalankan terhadap database nyata. **64 berkas PHP tanpa galat parsing**. Suite ini berada di `.preview/` yang diabaikan Git. Regresi 503/503 pada bagian 20 berasal dari lingkungan uji lama; lingkungan preview dibangun ulang pada bagian 21 sehingga regresi itu tidak diulang, namun halaman-halaman yang terdampak diverifikasi langsung lewat suite di atas.
 

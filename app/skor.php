@@ -110,10 +110,11 @@ function predikat_dari_persentase(float $persentase): array
 
 
 /**
- * KEBIJAKAN BARU — ringkasan nilai keseluruhan untuk beranda siswa.
- * Predikat keseluruhan = rata-rata persentase capaian dari seluruh aspek,
- * sehingga tiap aspek berbobot sama walaupun targetnya berbeda.
- * Sertifikat tetap memakai predikat per aspek.
+ * Ringkasan nilai keseluruhan: rata-rata persentase capaian dari seluruh
+ * aspek, sehingga tiap aspek berbobot sama walaupun targetnya berbeda.
+ * Dipakai di beranda siswa dan (sejak bagian 21) pada HALAMAN 1 sertifikat
+ * sebagai "nilai rata-rata karakter" + predikat keseluruhan. Tabel pada
+ * HALAMAN 2 sertifikat tetap memakai predikat per aspek.
  */
 function ringkasan_skor_siswa(array $skor): array
 {

@@ -26,7 +26,7 @@ halaman_atas('Sertifikat Saya', 'Akhir semester', ['nav' => 'beranda']);
   </section>
 
   <div class="pesan pesan-info" role="status"><?= ikon('info', 20) ?>
-    <span>Sertifikat diterbitkan admin setelah periode input semester ditutup. Nilai yang tercetak adalah snapshot saat terbit. <strong>Selama semester ini masih berjalan Anda hanya dapat melihat sertifikat; tombol cetak baru tersedia setelah semester berganti.</strong></span>
+    <span>Sertifikat diterbitkan admin setelah periode input semester ditutup. Nilai yang tercetak adalah snapshot saat terbit. Sertifikat terdiri dari <strong>2 halaman A4 landscape</strong>: halaman 1 surat pernyataan berisi nilai rata-rata karakter, halaman 2 deskripsi penilaian per aspek. <strong>Selama semester ini masih berjalan Anda hanya dapat melihat sertifikat; tombol cetak baru tersedia setelah semester berganti.</strong></span>
   </div>
 
   <div class="tabel-bungkus">

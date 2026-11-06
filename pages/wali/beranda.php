@@ -66,7 +66,7 @@ halaman_atas('Beranda Wali Murid', 'Ringkasan anak', ['nav' => 'beranda']);
     <div class="kartu kartu-stat bg-koral"><p class="label-kecil">Alpa</p><span class="angka mono"><?= e($kehadiran['alpa'] ?? 0) ?></span></div>
   </div>
 
-  <?= bagian_judul('Sertifikat', count($sertifikat) . ' sertifikat') ?>
+  <?= bagian_judul('Sertifikat', count($sertifikat) . ' sertifikat · 2 halaman: pernyataan + deskripsi penilaian') ?>
   <div class="tabel-bungkus margin-bawah">
     <table class="tabel">
       <thead><tr><th>Semester</th><th>Kode</th><th>Status</th><th>Aksi</th></tr></thead>

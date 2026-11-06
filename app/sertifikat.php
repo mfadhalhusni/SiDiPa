@@ -12,6 +12,8 @@ declare(strict_types=1);
  |  - Kode berformat SDP-TAHUNSEM-NIS-ACAK4 dan unik.
  |  - Pembatalan menyimpan alasan, pelaku, dan waktu (bukan menghapus baris).
  |  - verifikasi.php publik hanya membaca kunci `aspek` dari snapshot.
+ |  - Bagian 21: `ringkasan` (rata-rata karakter + predikat keseluruhan)
+ |    ikut dibekukan untuk halaman 1 surat pernyataan.
  |--------------------------------------------------------------------------
  */
 
@@ -84,8 +86,13 @@ function snapshot_sertifikat(int $siswaId, int $semesterId): array
     if ($semester === null) {
         throw new RuntimeException('Semester tidak ditemukan.');
     }
+    $skorAspek = skor_per_aspek($siswaId, $semesterId);
+    // Agregat dibekukan BERSAMA snapshot (bagian 21): nilai rata-rata
+    // karakter pada halaman 1 tidak boleh berubah bila ambang predikat atau
+    // catatan poin diubah setelah penerbitan.
+    $ringkasan = ringkasan_skor_siswa($skorAspek);
     $aspek = [];
-    foreach (skor_per_aspek($siswaId, $semesterId) as $a) {
+    foreach ($skorAspek as $a) {
         $aspek[] = [
             'aspek' => $a['aspek'],
             'kode' => $a['kode'],
@@ -97,8 +104,17 @@ function snapshot_sertifikat(int $siswaId, int $semesterId): array
         ];
     }
     return [
-        'versi' => 1,
+        'versi' => 2,
         'dibuat_pada' => date('c'),
+        'ringkasan' => [
+            'jumlah_aspek' => (int) $ringkasan['jumlah_aspek'],
+            'total_poin' => (int) $ringkasan['total_poin'],
+            'total_target' => (int) $ringkasan['total_target'],
+            'rata_poin' => (float) $ringkasan['rata_poin'],
+            'rata_persen' => (float) $ringkasan['rata_persen'],
+            'predikat' => (string) $ringkasan['predikat'],
+            'keterangan' => (string) $ringkasan['keterangan'],
+        ],
         'sekolah' => [
             'nama' => (string) pengaturan('nama_sekolah', 'SMK SiDiPa'),
             'alamat' => (string) pengaturan('alamat_sekolah', ''),

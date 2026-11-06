@@ -250,7 +250,7 @@ halaman_atas('Semester & Sertifikat', 'Admin / Akhir periode', [
   </form>
 </section>
 
-<?= bagian_judul('Daftar sertifikat', count($daftarSertifikat) . ' baris') ?>
+<?= bagian_judul('Daftar sertifikat', count($daftarSertifikat) . ' baris · cetak 2 halaman A4 landscape') ?>
 <div class="tabel-bungkus">
   <table class="tabel">
     <thead><tr><th>Siswa</th><th>Kelas</th><th>Kode</th><th>Terbit</th><th>Status</th><th>Aksi</th></tr></thead>
