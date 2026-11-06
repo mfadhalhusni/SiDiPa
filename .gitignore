@@ -1,0 +1,15 @@
+# Berkas runtime yang tidak boleh masuk Git
+storage/logs/*.log
+public/uploads/*
+!public/uploads/.htaccess
+!public/uploads/.gitkeep
+config.local.php
+.DS_Store
+Thumbs.db
+node_modules/
+vendor/
+*.swp
+
+# Server ujicoba lokal (PHP-WASM + MySQL portabel) — bukan bagian aplikasi
+.preview/
+

@@ -1,0 +1,2 @@
+# Berkas cron hanya boleh dijalankan dari baris perintah cPanel atau tombol admin.
+Require all denied

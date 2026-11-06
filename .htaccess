@@ -1,0 +1,40 @@
+# ============================================================
+# SiDiPa — aturan dasar cPanel / Apache untuk PWA
+# Aman dipasang di root aplikasi (juga bila di subdirektori).
+# ============================================================
+
+Options -Indexes
+
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType application/javascript .js
+  AddType text/css .css
+  AddType image/svg+xml .svg
+  AddType image/png .png
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Service worker dan manifest jangan pernah di-cache agen perantara,
+  # supaya pembaruan versi langsung sampai ke perangkat pengguna.
+  <FilesMatch "^(sw\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+  <Files "sw.js">
+    Header set Service-Worker-Allowed "/"
+  </Files>
+  <FilesMatch "\.(css|js|png|svg|webp|jpg|jpeg)$">
+    Header append Vary Accept-Encoding
+  </FilesMatch>
+</IfModule>
+
+# Berkas konfigurasi, log, dan skrip cron tidak boleh diakses dari browser.
+<FilesMatch "^(config\.php|database\.sql)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
